@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Card, CardContent, Typography, TextField, Button } from '@mui/material';
+import { Typography, TextField, Button, Grid, Box } from '@mui/material';
 
 export interface FlashCardForm {
   question: string;
@@ -15,46 +15,62 @@ interface FlashCardProps {
 
 const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
   const { register, handleSubmit, reset } = useForm<FlashCardForm>({
-    defaultValues: { question: defaultQuestion, answer: "" }
+    defaultValues: { question: defaultQuestion, answer: '' }
   });
 
-  // Atualiza o formulário sempre que defaultQuestion mudar
   useEffect(() => {
-    reset({ question: defaultQuestion, answer: "" });
+    reset({ question: defaultQuestion, answer: '' });
   }, [defaultQuestion, reset]);
 
   return (
-    <Card sx={{ width: 800, margin: '0 auto' }}>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            {ancestorsInfo}
-          </Typography>
-          <TextField
-            {...register("question")}
-            label="Pergunta"
-            multiline
-            rows={6}
-            variant="outlined"
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            {...register("answer")}
-            label="Resposta"
-            multiline
-            rows={6}
-            variant="outlined"
-            fullWidth
-            margin="normal"
-          />
-          <Button type="submit" variant="contained" color="primary" style={{ marginTop: "1rem" }}>
-            Enviar Flash Card
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <Box 
+      sx={{ 
+        borderRadius: 2,
+        boxShadow: 1,
+        padding: 2,
+        backgroundColor: 'background.paper',
+        width: '100vh', 
+        margin: -50 
+      }}
+    >
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Typography variant="body2" color="textSecondary" gutterBottom>
+          {ancestorsInfo}
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={8}>
+            <TextField
+              {...register('question')}
+              label="Pergunta"
+              multiline
+              rows={6}
+              variant="outlined"
+              fullWidth
+              margin="normal"
+            />
+          </Grid>
+          <Grid item xs={4}>
+            <TextField
+              {...register('answer')}
+              label="Resposta"
+              multiline
+              rows={6}
+              variant="outlined"
+              fullWidth
+              margin="normal"
+            />
+          </Grid>
+        </Grid>
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          sx={{ marginTop: 2 }}
+        >
+          Enviar Flash Card
+        </Button>
+      </form>
+    </Box>
   );
 };
 
