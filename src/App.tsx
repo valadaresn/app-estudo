@@ -1,12 +1,12 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import CSVUploader from './components/CSVUploader';
+import StudyScreen from './components/StudyScreen';
 import './App.css';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<CSVUploader />} />
+        <Route path="/" element={<StudyScreen />} />
       </Routes>
     </Router>
   );
