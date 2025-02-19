@@ -11,7 +11,6 @@ const drawerWidth = 400;
 const StudyScreen: React.FC = () => {
   const [data, setData] = useState<Lei[]>([]);
   const [selectedLei, setSelectedLei] = useState<Lei | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0); // Adiciona o estado selectedIndex
   const [ancestorsInfo, setAncestorsInfo] = useState<string>("");
   const [defaultQuestion, setDefaultQuestion] = useState<string>("");
 
@@ -34,7 +33,6 @@ const StudyScreen: React.FC = () => {
         setData(leis);
         if (leis.length > 0) {
           setSelectedLei(leis[0]);
-          setSelectedIndex(0); // Define o índice selecionado inicial
           buildFlashCard(leis[0], leis);
         }
       });
@@ -43,7 +41,6 @@ const StudyScreen: React.FC = () => {
   const handleSelectionChange = (index: number) => {
     const lei = data[index];
     setSelectedLei(lei);
-    setSelectedIndex(index); // Atualiza o índice selecionado
     buildFlashCard(lei, data);
   };
 
@@ -67,7 +64,7 @@ const StudyScreen: React.FC = () => {
         }}
       >
         <Box>
-          <LeiList data={data} onSelectionChange={handleSelectionChange} selectedIndex={selectedIndex} />
+          <LeiList data={data} onSelectionChange={handleSelectionChange} />
         </Box>
       </Drawer>
 
@@ -75,14 +72,10 @@ const StudyScreen: React.FC = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          marginLeft: `${drawerWidth}px`, // Garante que o espaço do Drawer seja respeitado
-          display: 'flex',
-          justifyContent: 'center', // Centraliza horizontalmente
-          alignItems: 'flex-start', // Alinha no início verticalmente
-          maxHeight: '100vh', // Ocupa a altura total da tela
-          padding: 2, // Espaço interno para não ficar colado na borda
-          marginTop: 20, // Dá um espaçamento do Drawer
+          flexGrow: 1,           // cresce para ocupar todo o espaço vertical
+          width: `100%)`, // 100% da tela - a largura do Drawer
+          // se quiser um pouco de espaçamento, basta adicionar aqui, por exemplo: p: 2
+          marginLeft: `${drawerWidth}px`,
         }}
       >
         <FlashCard

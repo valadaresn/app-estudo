@@ -43,8 +43,8 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
               {...register('question')}
               label="Pergunta"
               multiline
-              rows={6}
-              variant="outlined"
+              
+              variant="filled"
               fullWidth
               margin="normal"
             />
@@ -53,9 +53,8 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
             <TextField
               {...register('answer')}
               label="Resposta"
-              multiline
-              rows={6}
-              variant="outlined"
+              multiline              
+              variant="standard"
               fullWidth
               margin="normal"
             />
