@@ -75,13 +75,11 @@ const StudyScreen: React.FC = () => {
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          marginLeft: `${drawerWidth}px`, // Garante que o espaço do Drawer seja respeitado
+          flexGrow: 1,          
           display: 'flex',
           justifyContent: 'center', // Centraliza horizontalmente
-          alignItems: 'flex-start', // Alinha no início verticalmente
-          maxHeight: '100vh', // Ocupa a altura total da tela
-          padding: 2, // Espaço interno para não ficar colado na borda
+          alignItems: 'center', // Alinha no início verticalmente          
+          //padding: 2, // Espaço interno para não ficar colado na borda
           marginTop: 20, // Dá um espaçamento do Drawer
         }}
       >

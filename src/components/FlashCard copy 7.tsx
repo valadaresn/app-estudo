@@ -12,17 +12,8 @@ import {
   DialogActions
 } from '@mui/material';
 
-interface Annotation {
-  start: number;
-  end: number;
-  style: string;
-}
-
 interface CardData {
-  // O conteúdo puro sem formatação
-  plainText: string;
-  // As anotações de formatação
-  annotations: Annotation[];
+  question: string;
   answer: string;
 }
 
@@ -32,78 +23,46 @@ export interface FlashCardForm {
 
 interface FlashCardProps {
   ancestorsInfo: string;
-  defaultQuestion: string; // texto puro
+  defaultQuestion: string;
   onSubmit: (data: FlashCardForm) => void;
 }
 
-// Função para formatar o texto puro com base nas anotações
-function formatText(plainText: string, annotations: Annotation[]): string {
-  let formatted = "";
-  let lastIndex = 0;
-  const sorted = [...annotations].sort((a, b) => a.start - b.start);
-  sorted.forEach(({ start, end, style }) => {
-    formatted += plainText.substring(lastIndex, start);
-    formatted += `<span style="color: ${style};">${plainText.substring(start, end)}</span>`;
-    lastIndex = end;
-  });
-  formatted += plainText.substring(lastIndex);
-  return formatted;
-}
-
-// Função para converter os offsets da seleção no DOM para offsets no plainText
-function getOffsetInPlainText(container: Node, target: Node, offset: number): number {
-  let total = 0;
-  let found = false;
-  
-  function traverse(node: Node): void {
-    if (node === target) {
-      total += offset;
-      found = true;
-      return;
-    }
-    if (node.nodeType === Node.TEXT_NODE) {
-      total += node.textContent?.length || 0;
-    } else {
-      for (let i = 0; i < node.childNodes.length; i++) {
-        traverse(node.childNodes[i]);
-        if (found) break;
-      }
-    }
-  }
-  
-  traverse(container);
-  return total;
-}
+type ActionType = 'edit' | 'split';
 
 const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
   const { handleSubmit, reset } = useForm<FlashCardForm>({
-    defaultValues: { cards: [{ plainText: defaultQuestion, annotations: [], answer: '' }] }
+    defaultValues: { cards: [{ question: defaultQuestion, answer: '' }] }
   });
 
-  // Estado dos cards – cada card possui o texto puro e as anotações
-  const [cards, setCards] = useState<CardData[]>([{ plainText: defaultQuestion, annotations: [], answer: '' }]);
-  // Refs para acessar o DOM de cada card
+  // Armazenamos cada card (pergunta/resposta)
+  const [cards, setCards] = useState<CardData[]>([{ question: defaultQuestion, answer: '' }]);
+
+  // Array de refs, um para cada card
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Estado do modal e seleção
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInput, setModalInput] = useState('');
-  // Guardamos os offsets relativos ao plainText
+  const [selectedTextOriginal, setSelectedTextOriginal] = useState('');
   const [selRange, setSelRange] = useState({ start: 0, end: 0 });
+  const [originalText, setOriginalText] = useState('');
   const [currentCardIndex, setCurrentCardIndex] = useState<number | null>(null);
-  const [actionType, setActionType] = useState<'edit' | 'split'>('edit');
+  const [actionType, setActionType] = useState<ActionType>('edit');
 
+  // Atualiza o form quando os cards mudam
   useEffect(() => {
     reset({ cards });
-  }, [cards, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards]);
 
+  // Atualiza o card inicial quando a prop defaultQuestion mudar
   useEffect(() => {
-    const newCards = [{ plainText: defaultQuestion, annotations: [], answer: '' }];
+    const newCards = [{ question: defaultQuestion, answer: '' }];
     setCards(newCards);
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
 
-  // Identifica qual card está selecionado com base no container
+  // Identifica qual card está selecionado, retornando o índice
   const getSelectedCardIndex = (): number | null => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return null;
@@ -117,90 +76,83 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     return null;
   };
 
-  // Handler genérico para seleção, para "edit" ou "split"
-  const handleSelection = (e: React.MouseEvent<HTMLButtonElement>, action: 'edit' | 'split') => {
+  // Captura seleção de texto para "Perguntar"
+  const handlePerguntarClickOneButton = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     const index = getSelectedCardIndex();
     if (index === null) return;
-    const card = cards[index];
     const ref = questionRefs.current[index];
     if (!ref) return;
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-
-    // Obtemos os offsets corretos no plainText usando o innerText do container
-    const container = ref;
-    const start = getOffsetInPlainText(container, selection.anchorNode!, selection.anchorOffset);
-    const end = getOffsetInPlainText(container, selection.focusNode!, selection.focusOffset);
-    if (start === end) return;
-
-    setActionType(action);
-    const selectedText = card.plainText.substring(Math.min(start, end), Math.max(start, end));
-    setModalInput(selectedText);
-    setSelRange({ start: Math.min(start, end), end: Math.max(start, end) });
-    setCurrentCardIndex(index);
-    setModalOpen(true);
+    const start = selection?.anchorOffset || 0;
+    const end = selection?.focusOffset || 0;
+    if (start !== end) {
+      setActionType('edit');
+      const currentCard = cards[index];
+      const selectedText = currentCard.question.substring(start, end);
+      setModalInput(selectedText);
+      setSelectedTextOriginal(selectedText);
+      setSelRange({ start, end });
+      setOriginalText(currentCard.question);
+      setCurrentCardIndex(index);
+      setModalOpen(true);
+    }
   };
 
-  const handlePerguntarClickOneButton = (e: React.MouseEvent<HTMLButtonElement>) => {
-    handleSelection(e, 'edit');
-  };
-
+  // Captura seleção de texto para "Criar nova pergunta"
   const handleNovaPerguntaClickOneButton = (e: React.MouseEvent<HTMLButtonElement>) => {
-    handleSelection(e, 'split');
+    e.preventDefault();
+    const index = getSelectedCardIndex();
+    if (index === null) return;
+    const ref = questionRefs.current[index];
+    if (!ref) return;
+    const selection = window.getSelection();
+    const start = selection?.anchorOffset || 0;
+    const end = selection?.focusOffset || 0;
+    if (start !== end) {
+      setActionType('split');
+      const currentCard = cards[index];
+      const selectedText = currentCard.question.substring(start, end);
+      setModalInput(selectedText);
+      setSelectedTextOriginal(selectedText);
+      setSelRange({ start, end });
+      setOriginalText(currentCard.question);
+      setCurrentCardIndex(index);
+      setModalOpen(true);
+    }
   };
 
-  // Ao confirmar no modal:
-  // Para "edit": substituímos o trecho do plainText pelo novo texto (entre chaves)
-  // e atualizamos as anotações para refletir o novo intervalo com o estilo "orange"
+  // Confirma edição ou split no modal
   const handleModalOk = () => {
     if (currentCardIndex !== null) {
-      const card = cards[currentCardIndex];
+      const replacedTextWithBraces = `{${modalInput}}`;
+      const currentCard = cards[currentCardIndex];
+      const beforeSelection = originalText.substring(0, selRange.start);
+      const afterSelection = originalText.substring(selRange.end);
+
       if (actionType === 'edit') {
-        // Novo texto com chaves
-        const replacedTextWithBraces = `{${modalInput}}`;
-        // Atualiza o plainText, substituindo o trecho selecionado pelo novo texto
-        const newPlainText =
-          card.plainText.substring(0, selRange.start) +
-          replacedTextWithBraces +
-          card.plainText.substring(selRange.end);
-        // Cria uma nova anotação para esse intervalo
-        const newAnnotation = {
-          start: selRange.start,
-          end: selRange.start + replacedTextWithBraces.length,
-          style: 'orange'
-        };
-        // Filtra as anotações antigas que não interferem com o intervalo substituído
-        const filteredAnnotations = card.annotations.filter(
-          (a) => a.end <= selRange.start || a.start >= selRange.end
-        );
-        // Adiciona a nova anotação e ordena
-        const newAnnotations = [...filteredAnnotations, newAnnotation].sort((a, b) => a.start - b.start);
-        const newCard: CardData = { plainText: newPlainText, annotations: newAnnotations, answer: card.answer };
+        const replacedText = beforeSelection + replacedTextWithBraces + afterSelection;
         const newCards = [...cards];
-        newCards[currentCardIndex] = newCard;
+        newCards[currentCardIndex] = { question: replacedText, answer: selectedTextOriginal };
         setCards(newCards);
       } else {
-        // Lógica para 'split'
-        const beforeText = card.plainText.substring(0, selRange.start);
-        const selectedText = card.plainText.substring(selRange.start, selRange.end);
-        const afterText = card.plainText.substring(selRange.end);
-        const updatedCard: CardData = {
-          plainText: beforeText,
-          annotations: card.annotations.filter(a => a.end <= selRange.start),
-          answer: card.answer
+        // 'split'
+        const updatedCurrentCard: CardData = {
+          question: beforeSelection,
+          answer: currentCard.answer
         };
         const newCard: CardData = {
-          plainText: afterText,
-          annotations: card.annotations.filter(a => a.start >= selRange.end),
-          answer: selectedText
+          question: replacedTextWithBraces + afterSelection,
+          answer: selectedTextOriginal
         };
         const newCards = [...cards];
+
         if (cards.length === 1) {
-          newCards[0] = updatedCard;
+          // Só existe 1 card
+          newCards[0] = updatedCurrentCard;
           newCards.push(newCard);
         } else {
-          newCards[currentCardIndex] = updatedCard;
+          newCards[currentCardIndex] = updatedCurrentCard;
           newCards.splice(currentCardIndex + 1, 0, newCard);
         }
         setCards(newCards);
@@ -223,6 +175,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         }}
       >
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Dois botões globais (Perguntar / Criar nova pergunta) */}
           <Grid container spacing={2} sx={{ marginBottom: 2 }}>
             <Grid item>
               <Button onClick={handlePerguntarClickOneButton} variant="outlined">
@@ -258,15 +211,13 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
                         cursor: 'text',
                         backgroundColor: '#F5F5F5',
                         borderRadius: 1,
+                        Height: 56,
                         height: 'auto'
                       }}
                     >
-                      <Typography
-                        sx={{ whiteSpace: 'pre-wrap' }}
-                        dangerouslySetInnerHTML={{
-                          __html: formatText(card.plainText, card.annotations)
-                        }}
-                      />
+                      <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                        {card.question}
+                      </Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={4}>
