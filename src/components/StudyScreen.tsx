@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Drawer, Box } from '@mui/material';
 import { parseCSV } from '../util/csvUtils';
 import { Lei } from '../models/Lei';
-import FlashCard, { FlashCardForm } from './FlashCard';
+import FlashCard from './flashCard/FlashCard'; // Atualizado o caminho do FlashCard
+import { FlashCardForm } from '../models/flashCardTypes'; // Importa FlashCardForm do arquivo de tipos
 import { getAncestors, mapRowToLei } from '../util/leiUtils';
 import LeiList from './LeiList';
 
