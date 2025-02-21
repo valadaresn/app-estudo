@@ -19,9 +19,7 @@ interface Annotation {
 }
 
 interface CardData {
-  // O conteúdo puro sem formatação
   plainText: string;
-  // As anotações de formatação
   annotations: Annotation[];
   answer: string;
 }
@@ -32,11 +30,10 @@ export interface FlashCardForm {
 
 interface FlashCardProps {
   ancestorsInfo: string;
-  defaultQuestion: string; // texto puro
+  defaultQuestion: string;
   onSubmit: (data: FlashCardForm) => void;
 }
 
-// Função para formatar o texto puro com base nas anotações
 function formatText(plainText: string, annotations: Annotation[]): string {
   let formatted = "";
   let lastIndex = 0;
@@ -50,7 +47,6 @@ function formatText(plainText: string, annotations: Annotation[]): string {
   return formatted;
 }
 
-// Função para converter os offsets da seleção no DOM para offsets no plainText
 function getOffsetInPlainText(container: Node, target: Node, offset: number): number {
   let total = 0;
   let found = false;
@@ -80,15 +76,13 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     defaultValues: { cards: [{ plainText: defaultQuestion, annotations: [], answer: '' }] }
   });
 
-  // Estado dos cards – cada card possui o texto puro e as anotações
   const [cards, setCards] = useState<CardData[]>([{ plainText: defaultQuestion, annotations: [], answer: '' }]);
-  // Refs para acessar o DOM de cada card
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Estado do modal e seleção
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInput, setModalInput] = useState('');
-  // Guardamos os offsets relativos ao plainText
+  // Armazena o trecho originalmente selecionado
+  const [originalSelection, setOriginalSelection] = useState('');
   const [selRange, setSelRange] = useState({ start: 0, end: 0 });
   const [currentCardIndex, setCurrentCardIndex] = useState<number | null>(null);
   const [actionType, setActionType] = useState<'edit' | 'split'>('edit');
@@ -103,7 +97,6 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
 
-  // Identifica qual card está selecionado com base no container
   const getSelectedCardIndex = (): number | null => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return null;
@@ -117,7 +110,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     return null;
   };
 
-  // Handler genérico para seleção, para "edit" ou "split"
+  // Para ações com modal ("Perguntar" e "Criar nova pergunta")
   const handleSelection = (e: React.MouseEvent<HTMLButtonElement>, action: 'edit' | 'split') => {
     e.preventDefault();
     const index = getSelectedCardIndex();
@@ -128,17 +121,17 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
 
-    // Obtemos os offsets corretos no plainText usando o innerText do container
     const container = ref;
     const start = getOffsetInPlainText(container, selection.anchorNode!, selection.anchorOffset);
     const end = getOffsetInPlainText(container, selection.focusNode!, selection.focusOffset);
     if (start === end) return;
 
-    setActionType(action);
     const selectedText = card.plainText.substring(Math.min(start, end), Math.max(start, end));
+    setOriginalSelection(selectedText);
     setModalInput(selectedText);
     setSelRange({ start: Math.min(start, end), end: Math.max(start, end) });
     setCurrentCardIndex(index);
+    setActionType(action);
     setModalOpen(true);
   };
 
@@ -150,50 +143,78 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     handleSelection(e, 'split');
   };
 
-  // Ao confirmar no modal:
-  // Para "edit": substituímos o trecho do plainText pelo novo texto (entre chaves)
-  // e atualizamos as anotações para refletir o novo intervalo com o estilo "orange"
+  // Handler "Dividir": sem modal, e answer fica vazio
+  const handleDividirClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const index = getSelectedCardIndex();
+    if (index === null) return;
+    const card = cards[index];
+    const ref = questionRefs.current[index];
+    if (!ref) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    
+    const container = ref;
+    const start = getOffsetInPlainText(container, selection.anchorNode!, selection.anchorOffset);
+    const beforeText = card.plainText.substring(0, start);
+    const afterText = card.plainText.substring(start);
+    
+    const updatedCard: CardData = {
+      plainText: beforeText,
+      annotations: card.annotations.filter(a => a.end <= start),
+      answer: card.answer
+    };
+    
+    const newCard: CardData = {
+      plainText: afterText,
+      annotations: [],
+      answer: '' // answer fica vazio
+    };
+    
+    const newCards = [...cards];
+    newCards[index] = updatedCard;
+    newCards.splice(index + 1, 0, newCard);
+    setCards(newCards);
+    
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges();
+    }
+  };
+
   const handleModalOk = () => {
     if (currentCardIndex !== null) {
       const card = cards[currentCardIndex];
       if (actionType === 'edit') {
-        // Novo texto com chaves
         const replacedTextWithBraces = `{${modalInput}}`;
-        // Atualiza o plainText, substituindo o trecho selecionado pelo novo texto
         const newPlainText =
           card.plainText.substring(0, selRange.start) +
           replacedTextWithBraces +
           card.plainText.substring(selRange.end);
-        // Cria uma nova anotação para esse intervalo
         const newAnnotation = {
           start: selRange.start,
           end: selRange.start + replacedTextWithBraces.length,
           style: 'orange'
         };
-        // Filtra as anotações antigas que não interferem com o intervalo substituído
         const filteredAnnotations = card.annotations.filter(
           (a) => a.end <= selRange.start || a.start >= selRange.end
         );
-        // Adiciona a nova anotação e ordena
         const newAnnotations = [...filteredAnnotations, newAnnotation].sort((a, b) => a.start - b.start);
-        const newCard: CardData = { plainText: newPlainText, annotations: newAnnotations, answer: card.answer };
+        // O campo answer recebe o trecho originalmente selecionado, não o modalInput
+        const newCard: CardData = { plainText: newPlainText, annotations: newAnnotations, answer: originalSelection };
         const newCards = [...cards];
         newCards[currentCardIndex] = newCard;
         setCards(newCards);
       } else {
-        // Lógica para 'split'
         const beforeText = card.plainText.substring(0, selRange.start);
-        const selectedText = card.plainText.substring(selRange.start, selRange.end);
-        const afterText = card.plainText.substring(selRange.end);
         const updatedCard: CardData = {
           plainText: beforeText,
           annotations: card.annotations.filter(a => a.end <= selRange.start),
           answer: card.answer
         };
         const newCard: CardData = {
-          plainText: afterText,
-          annotations: card.annotations.filter(a => a.start >= selRange.end),
-          answer: selectedText
+          plainText: modalInput,
+          annotations: [],
+          answer: modalInput
         };
         const newCards = [...cards];
         if (cards.length === 1) {
@@ -232,6 +253,11 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
             <Grid item>
               <Button onClick={handleNovaPerguntaClickOneButton} variant="outlined" color="secondary">
                 Criar nova pergunta
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button onClick={handleDividirClick} variant="outlined" color="error">
+                Dividir
               </Button>
             </Grid>
           </Grid>
