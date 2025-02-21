@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Box, Grid, Typography, Button } from '@mui/material';
 import { FlashCardForm, CardData } from '../../models/flashCardTypes';
-import FlashCardList from './FlashCardList';
+import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
 import useFlashCardActions from '../../hooks/useFlashCardActions';
 
@@ -41,16 +41,26 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     setCards(newCards);
   };
 
-  // Desestrutura as ações do hook, incluindo o setModalOpen para fechar o modal.
+  // Usaremos o botão "Editar" presente em cada FlashCardItem
+  // Assim, definimos um handler que recebe o índice do card a editar.
   const {
     modalOpen,
     setModalOpen,
     modalInput,
     setModalInput,
+    currentCardIndex,
+    setCurrentCardIndex,
     handlePerguntarClickOneButton,
     handleDividirClick,
     handleModalOk
   } = useFlashCardActions(cards, setCards, questionRefs);
+
+  const handleEditCard = (index: number) => {
+    // Popula o modal com os dados do card selecionado.
+    setModalInput(cards[index].plainText);
+    setCurrentCardIndex(index);
+    setModalOpen(true);
+  };
 
   return (
     <>
@@ -82,15 +92,19 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
             {ancestorsInfo}
           </Typography>
 
-          {/* Renderiza a lista de flashcards usando FlashCardList */}
-          <FlashCardList
-            cards={cards}
-            questionRefs={questionRefs}
-            onEdit={() => {
-              // A ação de edição é gerenciada pelo hook (através da seleção) e não precisa ser implementada aqui.
-            }}
-            onAnswerChange={handleAnswerChange}
-          />
+          {/* Renderiza a lista de flashcards diretamente no FlashCard */}
+          <Grid container spacing={2}>
+            {cards.map((card, index) => (
+              <FlashCardItem
+                key={index}
+                card={card}
+                index={index}
+                questionRefs={questionRefs}
+                onEdit={handleEditCard}
+                onAnswerChange={handleAnswerChange}
+              />
+            ))}
+          </Grid>
 
           <Grid container justifyContent="flex-end">
             <Grid item>
@@ -103,13 +117,21 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
       </Box>
 
       {/* Modal para edição ou divisão de texto */}
-      <FlashCardModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onOk={handleModalOk}
-        inputValue={modalInput}
-        setInputValue={setModalInput}
-      />
+      {currentCardIndex !== null && (
+        <FlashCardModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onOk={handleModalOk}
+          inputValue={modalInput}
+          setInputValue={setModalInput}
+          card={cards[currentCardIndex]}
+          onUpdateCard={(updatedCard: CardData) => {
+            const newCards = [...cards];
+            newCards[currentCardIndex] = updatedCard;
+            setCards(newCards);
+          }}
+        />
+      )}
     </>
   );
 };

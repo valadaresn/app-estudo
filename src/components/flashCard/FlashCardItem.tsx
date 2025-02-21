@@ -7,7 +7,7 @@ interface FlashCardItemProps {
   card: CardData;
   index: number;
   questionRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
-  onEdit: (card: CardData) => void;
+  onEdit: (index: number) => void;
   onAnswerChange: (index: number, answer: string) => void;
 }
 
@@ -69,11 +69,11 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
             onChange={(e) => onAnswerChange(index, e.target.value)}
           />
           <Button
-            onClick={() => onEdit(card)}
+            onClick={() => onEdit(index)}
             variant="outlined"
             sx={{ marginTop: 1 }}
           >
-            Edit
+            Editar
           </Button>
         </Grid>
       </Grid>
