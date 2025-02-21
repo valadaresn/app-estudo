@@ -1,9 +1,8 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
-import { updateCardAfterEdit } from '../../util/flashCardUtils';
 
-interface FlashCardModalProps {
+interface EditCardModalProps {
   open: boolean;
   onClose: () => void;
   inputValue: string;
@@ -13,11 +12,14 @@ interface FlashCardModalProps {
   currentCardIndex: number | null;
   setModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setCurrentCardIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  selRange: { start: number; end: number };
-  originalSelection: string;
 }
 
-const FlashCardModal: React.FC<FlashCardModalProps> = ({
+// Função para atualizar o card substituindo o plainText pelo novo texto
+const updateCardSimpleEdit = (card: CardData, newText: string): CardData => {
+  return { ...card, plainText: newText };
+};
+
+const EditCardModal: React.FC<EditCardModalProps> = ({
   open,
   onClose,
   inputValue,
@@ -26,13 +28,11 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
   setCards,
   currentCardIndex,
   setModalOpen,
-  setCurrentCardIndex,
-  selRange,
-  originalSelection
+  setCurrentCardIndex
 }) => {
-  const handleModalOk = () => {
+  const handleModalEdit = () => {
     if (currentCardIndex === null) return;
-    const newCard = updateCardAfterEdit(card, selRange, inputValue, originalSelection);
+    const newCard = updateCardSimpleEdit(card, inputValue);
     setCards((prevCards) => {
       const newCards = [...prevCards];
       newCards[currentCardIndex] = newCard;
@@ -44,7 +44,7 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Editar Texto Selecionado</DialogTitle>
+      <DialogTitle>Editar Texto do Card</DialogTitle>
       <DialogContent>
         <TextField
           value={inputValue}
@@ -75,12 +75,12 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleModalOk} variant="contained" color="primary">
-          Ok
+        <Button onClick={handleModalEdit} variant="contained" color="secondary">
+          Editar
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
 
-export default FlashCardModal;
+export default EditCardModal;

@@ -12,16 +12,10 @@ interface FlashCardItemProps {
 }
 
 /**
- * FlashCardItem é um componente que renderiza um único flash card,
- * exibindo o texto formatado (com anotações) e um input para a resposta.
- * Também oferece um botão para disparar a edição do card.
- *
- * Props:
- * - card: Dados do flash card (texto, anotações e resposta).
- * - index: Índice do card na lista.
- * - questionRefs: Referências para os elementos DOM dos cards.
- * - onEdit: Função chamada quando o botão de edição é clicado.
- * - onAnswerChange: Função chamada ao alterar o input de resposta.
+ * FlashCardItem renderiza um único flash card, exibindo o texto formatado
+ * (com anotações) e um input para a resposta. Contém também um botão "Editar"
+ * que, ao ser clicado, abre o modal para editar o card (tanto a resposta como a questão,
+ * sendo que o texto da questão é exibido em modo disable).
  */
 const FlashCardItem: React.FC<FlashCardItemProps> = ({
   card,

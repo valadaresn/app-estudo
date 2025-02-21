@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { CardData } from '../models/flashCardTypes';
 import { getOffsetInPlainText } from '../util/textUtils';
-import { updateCardAfterEdit, splitCard } from '../util/flashCardUtils';
-
-export type ActionType = 'edit';
+import { splitCard } from '../util/flashCardUtils';
 
 export interface SelectionRange {
   start: number;
@@ -25,7 +23,6 @@ function useFlashCardActions(
   const [originalSelection, setOriginalSelection] = useState<string>('');
   const [selRange, setSelRange] = useState<SelectionRange>({ start: 0, end: 0 });
   const [currentCardIndex, setCurrentCardIndex] = useState<number | null>(null);
-  const [actionType, setActionType] = useState<ActionType>('edit');
 
   const getSelectedCardIndex = (): number | null => {
     const selection = window.getSelection();
@@ -42,7 +39,7 @@ function useFlashCardActions(
 
   const handleSelection = (
     evt: React.MouseEvent<HTMLButtonElement>,
-    action: ActionType
+    action: 'question'
   ) => {
     evt.preventDefault();
     const index = getSelectedCardIndex();
@@ -73,12 +70,11 @@ function useFlashCardActions(
     setModalInput(selectedText);
     setSelRange({ start: s, end: e });
     setCurrentCardIndex(index);
-    setActionType(action);
     setModalOpen(true);
   };
 
   const handlePerguntarClickOneButton = (evt: React.MouseEvent<HTMLButtonElement>) => {
-    handleSelection(evt, 'edit');
+    handleSelection(evt, 'question');
   };
 
   const handleDividirClick = (evt: React.MouseEvent<HTMLButtonElement>) => {
@@ -107,19 +103,6 @@ function useFlashCardActions(
     window.getSelection()?.removeAllRanges();
   };
 
-  const handleModalOk = () => {
-    if (currentCardIndex === null) return;
-    const card = cards[currentCardIndex];
-    if (actionType === 'edit') {
-      const newCard = updateCardAfterEdit(card, selRange, modalInput, originalSelection);
-      const newCards = [...cards];
-      newCards[currentCardIndex] = newCard;
-      setCards(newCards);
-    }
-    setModalOpen(false);
-    setCurrentCardIndex(null);
-  };
-
   return {
     modalOpen,
     setModalOpen,
@@ -128,10 +111,9 @@ function useFlashCardActions(
     originalSelection,
     selRange,
     currentCardIndex,
-    actionType,
+    setCurrentCardIndex,
     handlePerguntarClickOneButton,
-    handleDividirClick,
-    handleModalOk
+    handleDividirClick
   };
 }
 

@@ -4,6 +4,7 @@ import { Box, Grid, Typography, Button } from '@mui/material';
 import { FlashCardForm, CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
+import EditCardModal from './EditCardModal';
 import useFlashCardActions from '../../hooks/useFlashCardActions';
 
 interface FlashCardProps {
@@ -41,8 +42,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     setCards(newCards);
   };
 
-  // Usaremos o botão "Editar" presente em cada FlashCardItem
-  // Assim, definimos um handler que recebe o índice do card a editar.
+  // Hook para gerenciamento das ações do flash card.
   const {
     modalOpen,
     setModalOpen,
@@ -52,14 +52,19 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     setCurrentCardIndex,
     handlePerguntarClickOneButton,
     handleDividirClick,
-    handleModalOk
+    selRange,
+    originalSelection
   } = useFlashCardActions(cards, setCards, questionRefs);
 
+  // Estado para o modal de edição
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+
+  // Ao clicar no botão "Editar", definimos o índice, preenchemos o campo de edição, 
+  // e mostramos o EditCardModal.
   const handleEditCard = (index: number) => {
-    // Popula o modal com os dados do card selecionado.
     setModalInput(cards[index].plainText);
     setCurrentCardIndex(index);
-    setModalOpen(true);
+    setEditModalOpen(true);
   };
 
   return (
@@ -92,7 +97,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
             {ancestorsInfo}
           </Typography>
 
-          {/* Renderiza a lista de flashcards diretamente no FlashCard */}
+          {/* Renderiza a lista de flashcards */}
           <Grid container spacing={2}>
             {cards.map((card, index) => (
               <FlashCardItem
@@ -116,20 +121,35 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         </form>
       </Box>
 
-      {/* Modal para edição ou divisão de texto */}
+      {/* Modal para Perguntar/Dividir (mantido com FlashCardModal) */}
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          onOk={handleModalOk}
           inputValue={modalInput}
           setInputValue={setModalInput}
           card={cards[currentCardIndex]}
-          onUpdateCard={(updatedCard: CardData) => {
-            const newCards = [...cards];
-            newCards[currentCardIndex] = updatedCard;
-            setCards(newCards);
-          }}
+          setCards={setCards}
+          currentCardIndex={currentCardIndex}
+          setModalOpen={setModalOpen}
+          setCurrentCardIndex={setCurrentCardIndex}
+          selRange={selRange}
+          originalSelection={originalSelection}
+        />
+      )}
+
+      {/* Modal específico para Edição */}
+      {currentCardIndex !== null && (
+        <EditCardModal
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          inputValue={modalInput}
+          setInputValue={setModalInput}
+          card={cards[currentCardIndex]}
+          setCards={setCards}
+          currentCardIndex={currentCardIndex}
+          setModalOpen={setEditModalOpen}
+          setCurrentCardIndex={setCurrentCardIndex}
         />
       )}
     </>
