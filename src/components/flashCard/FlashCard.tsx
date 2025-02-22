@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { Box, Grid, Typography, Button } from '@mui/material';
 import { FlashCardForm, CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
@@ -14,39 +14,36 @@ interface FlashCardProps {
 }
 
 const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
-  const { handleSubmit, reset } = useForm<FlashCardForm>({
+  const methods = useForm<FlashCardForm>({
     defaultValues: { cards: [{ plainText: defaultQuestion, annotations: [], answer: '' }] }
   });
+  const { handleSubmit, reset } = methods;
 
   const [cards, setCards] = useState<CardData[]>([
     { plainText: defaultQuestion, annotations: [], answer: '' }
   ]);
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Atualiza o formulário sempre que os cards mudam.
   useEffect(() => {
     reset({ cards });
   }, [cards, reset]);
 
-  // Recria os cards quando defaultQuestion muda.
   useEffect(() => {
     const newCards = [{ plainText: defaultQuestion, annotations: [], answer: '' }];
     setCards(newCards);
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
 
-  // Atualiza a resposta de um card específico.
   const handleAnswerChange = (index: number, answer: string) => {
     const newCards = [...cards];
     newCards[index].answer = answer;
     setCards(newCards);
   };
 
-  // Hook para gerenciamento das ações do flash card.
   const {
     modalOpen,
     setModalOpen,
-    modalInput,
+    modalInput,  // Contém a seleção do usuário
     setModalInput,
     currentCardIndex,
     setCurrentCardIndex,
@@ -58,17 +55,24 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
 
   // Estado para o modal de edição
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [currentEditCardIndex, setCurrentEditCardIndex] = useState<number | null>(null);
 
-  // Ao clicar no botão "Editar", definimos o índice, preenchemos o campo de edição, 
-  // e mostramos o EditCardModal.
   const handleEditCard = (index: number) => {
-    setModalInput(cards[index].plainText);
-    setCurrentCardIndex(index);
+    setCurrentEditCardIndex(index);
     setEditModalOpen(true);
   };
 
+  const handleUpdateCard = (updatedCard: CardData) => {
+    if (currentEditCardIndex === null) return;
+    const newCards = [...cards];
+    newCards[currentEditCardIndex] = updatedCard;
+    setCards(newCards);
+    setEditModalOpen(false);
+    setCurrentEditCardIndex(null);
+  };
+
   return (
-    <>
+    <FormProvider {...methods}>
       <Box
         sx={{
           borderRadius: 2,
@@ -97,7 +101,6 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
             {ancestorsInfo}
           </Typography>
 
-          {/* Renderiza a lista de flashcards */}
           <Grid container spacing={2}>
             {cards.map((card, index) => (
               <FlashCardItem
@@ -121,38 +124,37 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         </form>
       </Box>
 
-      {/* Modal para Perguntar/Dividir (mantido com FlashCardModal) */}
+      {/* Modal para Perguntar/Dividir (FlashCardModal) */}
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          inputValue={modalInput}
-          setInputValue={setModalInput}
-          card={cards[currentCardIndex]}
-          setCards={setCards}
-          currentCardIndex={currentCardIndex}
-          setModalOpen={setModalOpen}
-          setCurrentCardIndex={setCurrentCardIndex}
+          defaultCard={cards[currentCardIndex]}
+          defaultInput={modalInput} // Passa a seleção do usuário
+          onSubmit={(updatedCard: CardData) => {
+            setCards((prevCards) => {
+              const newCards = [...prevCards];
+              newCards[currentCardIndex] = updatedCard;
+              return newCards;
+            });
+            setModalOpen(false);
+            setCurrentCardIndex(null);
+          }}
           selRange={selRange}
           originalSelection={originalSelection}
         />
       )}
 
-      {/* Modal específico para Edição */}
-      {currentCardIndex !== null && (
+      {/* Modal para Edição (EditCardModal) */}
+      {currentEditCardIndex !== null && (
         <EditCardModal
           open={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          inputValue={modalInput}
-          setInputValue={setModalInput}
-          card={cards[currentCardIndex]}
-          setCards={setCards}
-          currentCardIndex={currentCardIndex}
-          setModalOpen={setEditModalOpen}
-          setCurrentCardIndex={setCurrentCardIndex}
+          defaultCard={cards[currentEditCardIndex]}
+          onSubmit={handleUpdateCard}
         />
       )}
-    </>
+    </FormProvider>
   );
 };
 

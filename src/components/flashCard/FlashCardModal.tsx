@@ -1,18 +1,20 @@
 import React from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
 import { updateCardAfterEdit } from '../../util/flashCardUtils';
 
+interface FlashModalFormData {
+    inputValue: string;
+    answer: string;
+}
+
 interface FlashCardModalProps {
   open: boolean;
   onClose: () => void;
-  inputValue: string;
-  setInputValue: (value: string) => void;
-  card: CardData; // Card selecionado
-  setCards: React.Dispatch<React.SetStateAction<CardData[]>>; // Atualiza os cards
-  currentCardIndex: number | null;
-  setModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setCurrentCardIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  defaultCard: CardData;
+  defaultInput: string; // A seleção do usuário, não o texto inteiro do card
+  onSubmit: (updatedCard: CardData) => void;
   selRange: { start: number; end: number };
   originalSelection: string;
 }
@@ -20,66 +22,52 @@ interface FlashCardModalProps {
 const FlashCardModal: React.FC<FlashCardModalProps> = ({
   open,
   onClose,
-  inputValue,
-  setInputValue,
-  card,
-  setCards,
-  currentCardIndex,
-  setModalOpen,
-  setCurrentCardIndex,
+  defaultCard,
+  defaultInput,
+  onSubmit,
   selRange,
   originalSelection
 }) => {
-  const handleModalOk = () => {
-    if (currentCardIndex === null) return;
-    const newCard = updateCardAfterEdit(card, selRange, inputValue, originalSelection);
-    setCards((prevCards) => {
-      const newCards = [...prevCards];
-      newCards[currentCardIndex] = newCard;
-      return newCards;
-    });
-    setModalOpen(false);
-    setCurrentCardIndex(null);
+  const methods = useForm<FlashModalFormData>({
+    defaultValues: {
+      inputValue: defaultInput, // Usa a seleção do usuário
+      answer: defaultCard.answer
+    }
+  });
+  const { handleSubmit, register } = methods;
+
+  const submitHandler = (data: FlashModalFormData) => {
+    const updatedCard = updateCardAfterEdit(defaultCard, selRange, data.inputValue, originalSelection);
+    updatedCard.answer = data.answer;
+    onSubmit(updatedCard);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Editar Texto Selecionado</DialogTitle>
-      <DialogContent>
-        <TextField
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          label="Texto"
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          value={card.plainText}
-          label="Plain Text"
-          fullWidth
-          margin="normal"
-          disabled
-        />
-        <TextField
-          value={card.answer}
-          onChange={(e) => setCards((prevCards) => {
-            const updatedCard = { ...card, answer: e.target.value };
-            const newCards = [...prevCards];
-            newCards[currentCardIndex!] = updatedCard;
-            return newCards;
-          })}
-          label="Answer"
-          fullWidth
-          margin="normal"
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleModalOk} variant="contained" color="primary">
-          Ok
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <FormProvider {...methods}>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar Texto Selecionado</DialogTitle>
+        <DialogContent>
+          <TextField
+            {...register('inputValue')}
+            label="Texto"
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            {...register('answer')}
+            label="Answer"
+            fullWidth
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSubmit(submitHandler)} variant="contained" color="primary">
+            Ok
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </FormProvider>
   );
 };
 
