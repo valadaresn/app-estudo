@@ -37,10 +37,7 @@ function useFlashCardActions(
     return null;
   };
 
-  const captureSelection = () => {
-    const selection = window.getSelection();
-    if (!selection) return null;
-    
+  const captureSelection = (selection: Selection) => {
     const index = getSelectedCardIndex(selection);
     if (index === null) return null;
 
@@ -53,6 +50,7 @@ function useFlashCardActions(
     const range = selection.getRangeAt(0);
     const text = range.toString();
     
+    // Encontra a posição do texto selecionado dentro do texto completo do card
     const start = card.plainText.indexOf(text);
     if (start === -1) return null;
     
@@ -63,10 +61,8 @@ function useFlashCardActions(
     };
   };
 
-  const handlePerguntarClickOneButton = () => {
-    resetSelectionStates(); // Reset estados antes de capturar nova seleção
-    
-    const selectionData = captureSelection();
+  const handlePerguntarClickOneButton = (selection: Selection) => {
+    const selectionData = captureSelection(selection);
     if (!selectionData) return;
 
     setOriginalSelection(selectionData.text);
@@ -76,8 +72,8 @@ function useFlashCardActions(
     setModalOpen(true);
   };
 
-  const handleDividirClick = () => {
-    const selectionData = captureSelection();
+  const handleDividirClick = (selection: Selection) => {
+    const selectionData = captureSelection(selection);
     if (!selectionData) return;
 
     const card = cards[selectionData.cardIndex];
@@ -87,11 +83,9 @@ function useFlashCardActions(
     newCards.splice(selectionData.cardIndex + 1, 0, newCard);
     setCards(newCards);
 
-    resetSelectionStates();
     window.getSelection()?.removeAllRanges();
   };
 
-  // Cleanup ao fechar o modal
   const handleCloseModal = useCallback(() => {
     setModalOpen(false);
     setCurrentCardIndex(null);
@@ -110,6 +104,13 @@ function useFlashCardActions(
     setCurrentCardIndex,
     handlePerguntarClickOneButton,
     handleDividirClick,
+    handleAnswerChange: (index: number, answer: string) => {
+      setCards(prevCards => {
+        const newCards = [...prevCards];
+        newCards[index].answer = answer;
+        return newCards;
+      });
+    }
   };
 }
 

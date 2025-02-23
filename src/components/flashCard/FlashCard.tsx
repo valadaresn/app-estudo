@@ -35,22 +35,17 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
 
-  const handleAnswerChange = (index: number, answer: string) => {
-    const newCards = [...cards];
-    newCards[index].answer = answer;
-    setCards(newCards);
-  };
-
   const {
     modalOpen,
-    setModalOpen,
+    setModalOpen, // Função de fechamento (handleCloseModal) sem argumentos
     modalInput,
     currentCardIndex,
     setCurrentCardIndex,
     handlePerguntarClickOneButton,
     handleDividirClick,
     selRange,
-    originalSelection
+    originalSelection,
+    handleAnswerChange
   } = useFlashCardActions(cards, setCards, questionRefs);
 
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
@@ -85,12 +80,12 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2} sx={{ marginBottom: 2 }}>
             <Grid item>
-              <Button onClick={handlePerguntarClickOneButton} variant="outlined">
+              <Button onClick={() => handlePerguntarClickOneButton(window.getSelection()!)} variant="outlined">
                 Perguntar
               </Button>
             </Grid>
             <Grid item>
-              <Button onClick={handleDividirClick} variant="outlined" color="error">
+              <Button onClick={() => handleDividirClick(window.getSelection()!)} variant="outlined" color="error">
                 Dividir
               </Button>
             </Grid>
@@ -128,13 +123,10 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         onDividir={handleDividirClick}
       />
 
-
-
-
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={setModalOpen} // setModalOpen aqui já é uma função sem parâmetros
           defaultCard={cards[currentCardIndex]}
           defaultInput={modalInput}
           onSubmit={(updatedCard: CardData) => {
@@ -143,7 +135,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
               newCards[currentCardIndex] = updatedCard;
               return newCards;
             });
-            setModalOpen(false);
+            setModalOpen(); // Chama o fechamento sem argumentos
             setCurrentCardIndex(null);
           }}
           selRange={selRange}
