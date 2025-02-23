@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CardData } from '../models/flashCardTypes';
-import { getOffsetInPlainText } from '../util/textUtils';
 import { splitCard } from '../util/flashCardUtils';
 
 export interface SelectionRange {
@@ -8,11 +7,6 @@ export interface SelectionRange {
   end: number;
 }
 
-/**
- * Hook para gerenciar as ações do FlashCard, como seleção, edição e divisão de cards.
- *
- * Recebe os cards atuais, a função para atualizá-los e as referências dos elementos dos cards.
- */
 function useFlashCardActions(
   cards: CardData[],
   setCards: React.Dispatch<React.SetStateAction<CardData[]>>,
@@ -24,8 +18,14 @@ function useFlashCardActions(
   const [selRange, setSelRange] = useState<SelectionRange>({ start: 0, end: 0 });
   const [currentCardIndex, setCurrentCardIndex] = useState<number | null>(null);
 
-  const getSelectedCardIndex = (): number | null => {
-    const selection = window.getSelection();
+  // Função para resetar todos os estados relacionados à seleção
+  const resetSelectionStates = useCallback(() => {
+    setModalInput('');
+    setOriginalSelection('');
+    setSelRange({ start: 0, end: 0 });
+  }, []);
+
+  const getSelectedCardIndex = (selection: Selection): number | null => {
     if (!selection || selection.rangeCount === 0) return null;
     const anchorNode = selection.anchorNode;
     for (let i = 0; i < questionRefs.current.length; i++) {
@@ -37,75 +37,71 @@ function useFlashCardActions(
     return null;
   };
 
-  const handleSelection = (
-    evt: React.MouseEvent<HTMLButtonElement>,
-    action: 'question'
-  ) => {
-    evt.preventDefault();
-    const index = getSelectedCardIndex();
-    if (index === null) return;
+  const captureSelection = () => {
+    const selection = window.getSelection();
+    if (!selection) return null;
+    
+    const index = getSelectedCardIndex(selection);
+    if (index === null) return null;
+
     const card = cards[index];
     const ref = questionRefs.current[index];
-    if (!ref) return;
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    if (!ref) return null;
 
-    const container = ref;
-    const startOffset = getOffsetInPlainText(
-      container,
-      selection.anchorNode!,
-      selection.anchorOffset
-    );
-    const endOffset = getOffsetInPlainText(
-      container,
-      selection.focusNode!,
-      selection.focusOffset
-    );
-    if (startOffset === endOffset) return;
+    if (selection.rangeCount === 0 || selection.isCollapsed) return null;
 
-    const s = Math.min(startOffset, endOffset);
-    const e = Math.max(startOffset, endOffset);
-    const selectedText = card.plainText.substring(s, e);
-    setOriginalSelection(selectedText);
-    setModalInput(selectedText);
-    setSelRange({ start: s, end: e });
-    setCurrentCardIndex(index);
+    const range = selection.getRangeAt(0);
+    const text = range.toString();
+    
+    const start = card.plainText.indexOf(text);
+    if (start === -1) return null;
+    
+    return {
+      text,
+      range: { start, end: start + text.length },
+      cardIndex: index
+    };
+  };
+
+  const handlePerguntarClickOneButton = () => {
+    resetSelectionStates(); // Reset estados antes de capturar nova seleção
+    
+    const selectionData = captureSelection();
+    if (!selectionData) return;
+
+    setOriginalSelection(selectionData.text);
+    setModalInput(selectionData.text);
+    setSelRange(selectionData.range);
+    setCurrentCardIndex(selectionData.cardIndex);
     setModalOpen(true);
   };
 
-  const handlePerguntarClickOneButton = (evt: React.MouseEvent<HTMLButtonElement>) => {
-    handleSelection(evt, 'question');
-  };
+  const handleDividirClick = () => {
+    const selectionData = captureSelection();
+    if (!selectionData) return;
 
-  const handleDividirClick = (evt: React.MouseEvent<HTMLButtonElement>) => {
-    evt.preventDefault();
-    const index = getSelectedCardIndex();
-    if (index === null) return;
-    const card = cards[index];
-    const ref = questionRefs.current[index];
-    if (!ref) return;
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-
-    const container = ref;
-    const startOffset = getOffsetInPlainText(
-      container,
-      selection.anchorNode!,
-      selection.anchorOffset
-    );
-    // Utiliza a função splitCard para separar o card em dois
-    const [updatedCard, newCard] = splitCard(card, startOffset);
+    const card = cards[selectionData.cardIndex];
+    const [updatedCard, newCard] = splitCard(card, selectionData.range.start);
     const newCards = [...cards];
-    newCards[index] = updatedCard;
-    newCards.splice(index + 1, 0, newCard);
+    newCards[selectionData.cardIndex] = updatedCard;
+    newCards.splice(selectionData.cardIndex + 1, 0, newCard);
     setCards(newCards);
 
+    resetSelectionStates();
     window.getSelection()?.removeAllRanges();
   };
 
+  // Cleanup ao fechar o modal
+  const handleCloseModal = useCallback(() => {
+    setModalOpen(false);
+    setCurrentCardIndex(null);
+    resetSelectionStates();
+    window.getSelection()?.removeAllRanges();
+  }, [resetSelectionStates]);
+
   return {
     modalOpen,
-    setModalOpen,
+    setModalOpen: handleCloseModal, // Substituído pelo handler que faz cleanup
     modalInput,
     setModalInput,
     originalSelection,
@@ -113,7 +109,7 @@ function useFlashCardActions(
     currentCardIndex,
     setCurrentCardIndex,
     handlePerguntarClickOneButton,
-    handleDividirClick
+    handleDividirClick,
   };
 }
 

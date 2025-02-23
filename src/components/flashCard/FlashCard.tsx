@@ -6,6 +6,7 @@ import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
 import EditCardModal from './EditCardModal';
 import useFlashCardActions from '../../hooks/useFlashCardActions';
+import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
 
 interface FlashCardProps {
   ancestorsInfo: string;
@@ -43,8 +44,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
   const {
     modalOpen,
     setModalOpen,
-    modalInput,  // Contém a seleção do usuário
-    //setModalInput,    
+    modalInput,
     currentCardIndex,
     setCurrentCardIndex,
     handlePerguntarClickOneButton,
@@ -53,7 +53,6 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     originalSelection
   } = useFlashCardActions(cards, setCards, questionRefs);
 
-  // Estado para o modal de edição
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [currentEditCardIndex, setCurrentEditCardIndex] = useState<number | null>(null);
 
@@ -124,13 +123,20 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         </form>
       </Box>
 
-      {/* Modal para Perguntar/Dividir (FlashCardModal) */}
+      <FlashCardFloatingToolbar
+        onPerguntar={handlePerguntarClickOneButton}
+        onDividir={handleDividirClick}
+      />
+
+
+
+
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           defaultCard={cards[currentCardIndex]}
-          defaultInput={modalInput} // Passa a seleção do usuário
+          defaultInput={modalInput}
           onSubmit={(updatedCard: CardData) => {
             setCards((prevCards) => {
               const newCards = [...prevCards];
@@ -145,7 +151,6 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         />
       )}
 
-      {/* Modal para Edição (EditCardModal) */}
       {currentEditCardIndex !== null && (
         <EditCardModal
           open={editModalOpen}
