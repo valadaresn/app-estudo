@@ -5,8 +5,8 @@ import { CardData } from '../../models/flashCardTypes';
 import { modifyCardText } from '../../util/flashCardUtils';
 
 interface FlashModalFormData {
-    inputValue: string;
-    answer: string;
+  inputValue: string;
+  answer: string;
 }
 
 interface FlashCardModalProps {
@@ -30,7 +30,7 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
 }) => {
   const methods = useForm<FlashModalFormData>({
     defaultValues: {
-      inputValue: defaultInput, // Usa a seleção do usuário
+      inputValue: defaultInput,
       answer: defaultCard.answer
     }
   });
@@ -38,7 +38,8 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
 
   const submitHandler = (data: FlashModalFormData) => {
     const modifiedCard = modifyCardText(defaultCard, selRange, data.inputValue, originalSelection);
-    modifiedCard.answer = data.answer;
+    // Preenche o answer com o texto que o usuário selecionou originalmente:
+    modifiedCard.answer = originalSelection; 
     onSubmit(modifiedCard);
   };
 
@@ -55,9 +56,10 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
           />
           <TextField
             {...register('answer')}
-            label="Answer"
+            label="Answer (não será usado)"
             fullWidth
             margin="normal"
+            helperText="O answer será preenchido com a seleção original."
           />
         </DialogContent>
         <DialogActions>
