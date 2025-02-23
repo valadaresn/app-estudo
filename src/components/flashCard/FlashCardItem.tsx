@@ -1,6 +1,5 @@
 import React from 'react';
 import { CardData } from '../../models/flashCardTypes';
-import { formatText } from '../../util/textUtils';
 import { Box, Grid, Typography, TextField, Button } from '@mui/material';
 
 interface FlashCardItemProps {
@@ -24,6 +23,32 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
   onEdit,
   onAnswerChange
 }) => {
+  // Variable for the orange color
+  const orangeColor = "#FFA500";
+
+  // This function searches for any text between braces and wraps it in a span styled in orange.
+  const highlightText = (text: string) => {
+    const regex = /{([^}]+)}/g;
+    let lastIndex = 0;
+    const elements: React.ReactNode[] = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        elements.push(text.substring(lastIndex, match.index));
+      }
+      elements.push(
+        <span key={match.index} style={{ color: orangeColor }}>
+          {match[0]}
+        </span>
+      );
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      elements.push(text.substring(lastIndex));
+    }
+    return elements;
+  };
+
   return (
     <Grid item xs={12}>
       <Grid container spacing={2} alignItems="center">
@@ -44,12 +69,9 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
               height: 'auto'
             }}
           >
-            <Typography
-              component="div"
-              dangerouslySetInnerHTML={{
-                __html: formatText(card.plainText, card.annotations)
-              }}
-            />
+            <Typography component="div">
+              {highlightText(card.plainText)}
+            </Typography>
           </Box>
         </Grid>
         <Grid item xs={4}>

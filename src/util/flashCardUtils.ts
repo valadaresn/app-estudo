@@ -12,7 +12,7 @@ import { CardData, Annotation } from '../models/flashCardTypes';
  * @param originalSelection - Trecho originalmente selecionado.
  * @returns CardData atualizado.
  */
-export function updateCardAfterEdit(
+export function modifyCardText(
   card: CardData,
   selRange: { start: number; end: number },
   modalInput: string,

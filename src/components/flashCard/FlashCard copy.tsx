@@ -44,7 +44,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     modalOpen,
     setModalOpen,
     modalInput,  // Contém a seleção do usuário
-    //setModalInput,    
+    setModalInput,
     currentCardIndex,
     setCurrentCardIndex,
     handlePerguntarClickOneButton,

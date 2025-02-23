@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
-import { updateCardAfterEdit } from '../../util/flashCardUtils';
+import { modifyCardText } from '../../util/flashCardUtils';
 
 interface FlashModalFormData {
     inputValue: string;
@@ -37,9 +37,9 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
   const { handleSubmit, register } = methods;
 
   const submitHandler = (data: FlashModalFormData) => {
-    const updatedCard = updateCardAfterEdit(defaultCard, selRange, data.inputValue, originalSelection);
-    updatedCard.answer = data.answer;
-    onSubmit(updatedCard);
+    const modifiedCard = modifyCardText(defaultCard, selRange, data.inputValue, originalSelection);
+    modifiedCard.answer = data.answer;
+    onSubmit(modifiedCard);
   };
 
   return (
