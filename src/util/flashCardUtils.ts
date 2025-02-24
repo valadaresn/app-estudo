@@ -1,10 +1,8 @@
-import { CardData, Annotation } from '../models/flashCardTypes';
+import { CardData } from '../models/flashCardTypes';
 
 /**
  * Atualiza um card após a ação de edição.
- *
- * Substitui o trecho selecionado pelo novo texto (envolvido por marcadores) 
- * e atualiza as anotações, mantendo aquelas que não interferiram na seleção.
+ * Substitui o trecho selecionado pelo novo texto envolvido por marcadores markdown.
  *
  * @param card - Card original.
  * @param selRange - Objeto com os offsets inicial e final da seleção.
@@ -24,21 +22,9 @@ export function modifyCardText(
     replacedText +
     card.plainText.substring(selRange.end);
 
-  const newAnnotation: Annotation = {
-    start: selRange.start,
-    end: selRange.start + replacedText.length,
-    style: 'orange'
-  };
-
-  const filteredAnnotations = card.annotations.filter(
-    (a) => a.end <= selRange.start || a.start >= selRange.end
-  );
-
-  const newAnnotations = [...filteredAnnotations, newAnnotation].sort((a, b) => a.start - b.start);
-
   return {
     plainText: newPlainText,
-    annotations: newAnnotations,
+    originalText: card.originalText,
     answer: originalSelection
   };
 }
@@ -47,8 +33,8 @@ export function modifyCardText(
  * Separa um card em dois a partir de um índice de divisão.
  *
  * Divide o card original em:
- * - Um card com o texto anterior à divisão, mantendo as anotações que não ultrapassam o índice.
- * - Um novo card com o texto após o índice, sem anotações e resposta vazia.
+ * - Um card com o texto anterior à divisão
+ * - Um novo card com o texto após o índice
  *
  * @param card - Card original.
  * @param splitIndex - Índice onde o texto será dividido.
@@ -58,18 +44,22 @@ export function splitCard(
   card: CardData,
   splitIndex: number
 ): [CardData, CardData] {
+  // Antes havia .trim(), agora removemos para manter o texto exato
   const beforeText = card.plainText.substring(0, splitIndex);
   const afterText = card.plainText.substring(splitIndex);
 
+  const originalBeforeText = card.originalText.substring(0, splitIndex);
+  const originalAfterText = card.originalText.substring(splitIndex);
+
   const updatedCard: CardData = {
     plainText: beforeText,
-    annotations: card.annotations.filter(a => a.end <= splitIndex),
+    originalText: originalBeforeText,
     answer: card.answer
   };
 
   const newCard: CardData = {
     plainText: afterText,
-    annotations: [],
+    originalText: originalAfterText,
     answer: ''
   };
 

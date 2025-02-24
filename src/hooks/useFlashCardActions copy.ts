@@ -67,40 +67,7 @@ function useFlashCardActions(
   }, [cards, questionRefs]);
 
 
-    /**
-   * Separa um card em dois a partir dos índices de divisão.
-   * 
-   * @param card - Card original
-   * @param indices - Objeto contendo os índices de divisão para plainText e originalText
-   * @returns Tuple [cardAtualizado, novoCard]
-   */
-   function splitCard(
-    card: CardData,
-    indices: {
-      plainText: number,
-      originalText: number
-    }
-  ): [CardData, CardData] {
-    const beforeText = card.plainText.substring(0, indices.plainText);
-    const afterText = card.plainText.substring(indices.plainText);
-  
-    const originalBeforeText = card.originalText.substring(0, indices.originalText);
-    const originalAfterText = card.originalText.substring(indices.originalText);
-  
-    const updatedCard: CardData = {
-      plainText: beforeText,
-      originalText: originalBeforeText,
-      answer: card.answer
-    };
-  
-    const newCard: CardData = {
-      plainText: afterText,
-      originalText: originalAfterText,
-      answer: ''
-    };
-  
-    return [updatedCard, newCard];
-  }
+
 
   
 
@@ -125,29 +92,19 @@ function useFlashCardActions(
   }, [resetSelectionStates]);
 
   // Manipulação da divisão do card
-const handleDividirClick = useCallback((selection: Selection) => {
-  const selectionData = captureSelection(selection);
-  if (!selectionData) return;
+  const handleDividirClick = useCallback((selection: Selection) => {
+    const selectionData = captureSelection(selection);
+    if (!selectionData) return;
 
-  const card = cards[selectionData.cardIndex];
-  
-  // Novo: calculando o índice em originalText
-  const remainingText = card.plainText.substring(selectionData.range.start);
-  const originalTextIndex = card.originalText.length - remainingText.length;
-  
-  // Modificado: passando objeto com ambos os índices
-  const [updatedCard, newCard] = splitCard(card, {
-    plainText: selectionData.range.start,
-    originalText: originalTextIndex
-  });
+    const card = cards[selectionData.cardIndex];
+    const [updatedCard, newCard] = splitCard(card, selectionData.range.start);
+    const newCards = [...cards];
+    newCards[selectionData.cardIndex] = updatedCard;
+    newCards.splice(selectionData.cardIndex + 1, 0, newCard);
+    setCards(newCards);
 
-  const newCards = [...cards];
-  newCards[selectionData.cardIndex] = updatedCard;
-  newCards.splice(selectionData.cardIndex + 1, 0, newCard);
-  setCards(newCards);
-
-  window.getSelection()?.removeAllRanges();
-}, [cards, setCards, captureSelection]);
+    window.getSelection()?.removeAllRanges();
+  }, [cards, setCards, captureSelection]);
 
   // Manipulação da edição do card
   const handleEditCard = useCallback((index: number) => {

@@ -4,7 +4,7 @@ import { Box, Grid, Typography, Button } from '@mui/material';
 import { FlashCardForm, CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
-import EditCardModal from './EditCardModal';
+import EditCardModal from './/EditCardModal';
 import useFlashCardActions from '../../hooks/useFlashCardActions';
 import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
 
@@ -15,14 +15,22 @@ interface FlashCardProps {
 }
 
 const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
+  // Inicializa os métodos do react-hook-form com os valores iniciais atualizados
   const methods = useForm<FlashCardForm>({
-    defaultValues: { cards: [{ plainText: defaultQuestion, annotations: [], answer: '' }] }
+    defaultValues: {
+      cards: [
+        { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
+      ]
+    }
   });
   const { handleSubmit, reset } = methods;
 
+  // Estado dos cards (modelo atualizado sem annotations)
   const [cards, setCards] = useState<CardData[]>([
-    { plainText: defaultQuestion, annotations: [], answer: '' }
+    { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
   ]);
+  
+  // Referências aos elementos de cada card para auxiliar na captura da seleção
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -30,40 +38,31 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
   }, [cards, reset]);
 
   useEffect(() => {
-    const newCards = [{ plainText: defaultQuestion, annotations: [], answer: '' }];
+    const newCards = [
+      { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
+    ];
     setCards(newCards);
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
 
+  // Extrai os métodos do hook centralizado em useFlashCardActions
   const {
     modalOpen,
-    setModalOpen, // Função de fechamento (handleCloseModal) sem argumentos
+    setModalOpen, // Função de fechamento do modal (handleCloseModal)
     modalInput,
     currentCardIndex,
-    setCurrentCardIndex,
+    editModalOpen,
+    setEditModalOpen, 
+    currentEditCardIndex,
     handlePerguntarClickOneButton,
     handleDividirClick,
+    handleEditCard,
+    handleUpdateCard,
+    handleAnswerChange,
     selRange,
     originalSelection,
-    handleAnswerChange
+    handleDeleteCard
   } = useFlashCardActions(cards, setCards, questionRefs);
-
-  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
-  const [currentEditCardIndex, setCurrentEditCardIndex] = useState<number | null>(null);
-
-  const handleEditCard = (index: number) => {
-    setCurrentEditCardIndex(index);
-    setEditModalOpen(true);
-  };
-
-  const handleUpdateCard = (updatedCard: CardData) => {
-    if (currentEditCardIndex === null) return;
-    const newCards = [...cards];
-    newCards[currentEditCardIndex] = updatedCard;
-    setCards(newCards);
-    setEditModalOpen(false);
-    setCurrentEditCardIndex(null);
-  };
 
   return (
     <FormProvider {...methods}>
@@ -79,13 +78,22 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
       >
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2} sx={{ marginBottom: 2 }}>
+            {/* Botão para perguntar (abrir modal de pergunta) */}
             <Grid item>
-              <Button onClick={() => handlePerguntarClickOneButton(window.getSelection()!)} variant="outlined">
+              <Button
+                onClick={() => handlePerguntarClickOneButton(window.getSelection()!)}
+                variant="outlined"
+              >
                 Perguntar
               </Button>
             </Grid>
+            {/* Botão para dividir o card */}
             <Grid item>
-              <Button onClick={() => handleDividirClick(window.getSelection()!)} variant="outlined" color="error">
+              <Button
+                onClick={() => handleDividirClick(window.getSelection()!)}
+                variant="outlined"
+                color="error"
+              >
                 Dividir
               </Button>
             </Grid>
@@ -96,6 +104,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
           </Typography>
 
           <Grid container spacing={2}>
+            {/* Renderiza cada FlashCardItem */}
             {cards.map((card, index) => (
               <FlashCardItem
                 key={index}
@@ -118,37 +127,36 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         </form>
       </Box>
 
+      {/* Toolbar flutuante com ações de perguntar e dividir */}
       <FlashCardFloatingToolbar
         onPerguntar={handlePerguntarClickOneButton}
         onDividir={handleDividirClick}
       />
 
+      {/* Modal para edição com a função de perguntar */}
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
-          onClose={setModalOpen} // setModalOpen aqui já é uma função sem parâmetros
+          onClose={setModalOpen} // Função de fechamento do modal (sem argumentos)
           defaultCard={cards[currentCardIndex]}
           defaultInput={modalInput}
           onSubmit={(updatedCard: CardData) => {
-            setCards((prevCards) => {
-              const newCards = [...prevCards];
-              newCards[currentCardIndex] = updatedCard;
-              return newCards;
-            });
-            setModalOpen(); // Chama o fechamento sem argumentos
-            setCurrentCardIndex(null);
+            // Atualiza o card usando o método centralizado
+            handleUpdateCard(updatedCard);
           }}
           selRange={selRange}
           originalSelection={originalSelection}
         />
       )}
 
+      {/* Modal para edição do card */}
       {currentEditCardIndex !== null && (
         <EditCardModal
           open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
+          onClose={() => setEditModalOpen(false)}  // Utilize a mesma função de fechamento sem passar argumentos
           defaultCard={cards[currentEditCardIndex]}
           onSubmit={handleUpdateCard}
+          onDelete={() => handleDeleteCard(currentEditCardIndex)}
         />
       )}
     </FormProvider>

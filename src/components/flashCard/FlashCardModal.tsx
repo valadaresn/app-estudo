@@ -13,7 +13,7 @@ interface FlashCardModalProps {
   open: boolean;
   onClose: () => void;
   defaultCard: CardData;
-  defaultInput: string; // A seleção do usuário, não o texto inteiro do card
+  defaultInput: string;
   onSubmit: (updatedCard: CardData) => void;
   selRange: { start: number; end: number };
   originalSelection: string;
@@ -34,25 +34,42 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
       answer: defaultCard.answer
     }
   });
+  
   const { handleSubmit, register } = methods;
 
   const submitHandler = (data: FlashModalFormData) => {
-    const modifiedCard = modifyCardText(defaultCard, selRange, data.inputValue, originalSelection);
-    // Preenche o answer com o texto que o usuário selecionou originalmente:
-    modifiedCard.answer = originalSelection; 
+    const modifiedCard = modifyCardText(
+      defaultCard, 
+      selRange, 
+      data.inputValue, 
+      originalSelection
+    );
+    
+    // Preenche o answer com o texto que o usuário selecionou originalmente
+    modifiedCard.answer = originalSelection;
+    
+    // Submete as alterações e fecha o modal
     onSubmit(modifiedCard);
+    onClose();
   };
 
   return (
     <FormProvider {...methods}>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="sm" 
+        fullWidth
+      >
         <DialogTitle>Editar Texto Selecionado</DialogTitle>
+        
         <DialogContent>
           <TextField
             {...register('inputValue')}
             label="Texto"
             fullWidth
             margin="normal"
+            autoFocus
           />
           <TextField
             {...register('answer')}
@@ -60,11 +77,19 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
             fullWidth
             margin="normal"
             helperText="O answer será preenchido com a seleção original."
+            disabled
           />
         </DialogContent>
+        
         <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit(submitHandler)} variant="contained" color="primary">
+          <Button onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit(submitHandler)} 
+            variant="contained" 
+            color="primary"
+          >
             Ok
           </Button>
         </DialogActions>

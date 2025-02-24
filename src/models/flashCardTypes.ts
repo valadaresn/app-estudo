@@ -6,7 +6,7 @@ export interface Annotation {
 
 export interface CardData {
   plainText: string;
-  annotations: Annotation[];
+  originalText: string;  
   answer: string;
 }
 
