@@ -4,15 +4,9 @@ import { Box, Grid, Typography, Button } from '@mui/material';
 import { FlashCardForm, CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
-import EditCardModal from './EditCardModal';
+import EditCardModal from './/EditCardModal';
+import useFlashCardActions from '../../hooks/useFlashCardActions';
 import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
-
-// Importando os hooks refatorados
-import useCardSelection from '../../hooks/flashCard/useCardSelection';
-import useCardSplitting from '../../hooks/flashCard/useCardSplitting';
-import useCardModals from '../../hooks/flashCard/useCardModals';
-import useCardEditing from '../../hooks/flashCard/useCardEditing';
-import useCardDelete from '../../hooks/flashCard/useCardDelete';
 
 interface FlashCardProps {
   ancestorsInfo: string;
@@ -21,7 +15,7 @@ interface FlashCardProps {
 }
 
 const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
-  // Inicializa os métodos do react-hook-form com os valores iniciais
+  // Inicializa os métodos do react-hook-form com os valores iniciais atualizados
   const methods = useForm<FlashCardForm>({
     defaultValues: {
       cards: [
@@ -31,68 +25,14 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
   });
   const { handleSubmit, reset } = methods;
 
-  // Estado dos cards
+  // Estado dos cards (modelo atualizado sem annotations)
   const [cards, setCards] = useState<CardData[]>([
     { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
   ]);
   
-  // Referências aos elementos de cada card
+  // Referências aos elementos de cada card para auxiliar na captura da seleção
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Aplicando os hooks refatorados
-  const { captureSelection } = useCardSelection(cards, questionRefs);
-  
-  const { 
-    modalOpen, 
-    modalInput, 
-    originalSelection,
-    selRange,
-    currentCardIndex,
-    editModalOpen,
-    currentEditCardIndex,    
-    setCurrentCardIndex,
-    setEditModalOpen,
-    setCurrentEditCardIndex,
-    handlePerguntarClickOneButton: handleModalOpen,
-    handleCloseModal,
-    resetSelectionStates
-  } = useCardModals();
-  
-  const { handleEditCard, handleUpdateCard, handleAnswerChange } = useCardEditing(
-    setCards,
-    handleCloseModal,
-    setEditModalOpen,
-    currentCardIndex,
-    setCurrentCardIndex,
-    currentEditCardIndex,
-    setCurrentEditCardIndex,
-    resetSelectionStates
-  );
-  
-  const { handleDividirClick: dividirHandler } = useCardSplitting(
-    cards,
-    setCards,
-    captureSelection
-  );
-  
-  const { handleDeleteCard } = useCardDelete(
-    setCards,
-    setEditModalOpen,
-    setCurrentEditCardIndex
-  );
-
-  // Wrapper para lidar com a seleção antes de abrir o modal de perguntas
-  const handlePerguntarClickOneButton = (selection: Selection) => {
-    const selectionData = captureSelection(selection);
-    handleModalOpen(selectionData);
-  };
-
-  // Wrapper para garantir que a função de dividir tenha acesso à seleção atual
-  const handleDividirClick = (selection: Selection) => {
-    dividirHandler(selection);
-  };
-
-  // Efeitos para sincronizar o estado dos cards com o formulário
   useEffect(() => {
     reset({ cards });
   }, [cards, reset]);
@@ -104,6 +44,25 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
     setCards(newCards);
     reset({ cards: newCards });
   }, [defaultQuestion, reset]);
+
+  // Extrai os métodos do hook centralizado em useFlashCardActions
+  const {
+    modalOpen,
+    setModalOpen, // Função de fechamento do modal (handleCloseModal)
+    modalInput,
+    currentCardIndex,
+    editModalOpen,
+    setEditModalOpen, 
+    currentEditCardIndex,
+    handlePerguntarClickOneButton,
+    handleDividirClick,
+    handleEditCard,
+    handleUpdateCard,
+    handleAnswerChange,
+    selRange,
+    originalSelection,
+    handleDeleteCard
+  } = useFlashCardActions(cards, setCards, questionRefs);
 
   return (
     <FormProvider {...methods}>
@@ -119,6 +78,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
       >
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2} sx={{ marginBottom: 2 }}>
+            {/* Botão para perguntar (abrir modal de pergunta) */}
             <Grid item>
               <Button
                 onClick={() => handlePerguntarClickOneButton(window.getSelection()!)}
@@ -127,6 +87,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
                 Perguntar
               </Button>
             </Grid>
+            {/* Botão para dividir o card */}
             <Grid item>
               <Button
                 onClick={() => handleDividirClick(window.getSelection()!)}
@@ -143,6 +104,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
           </Typography>
 
           <Grid container spacing={2}>
+            {/* Renderiza cada FlashCardItem */}
             {cards.map((card, index) => (
               <FlashCardItem
                 key={index}
@@ -165,27 +127,33 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
         </form>
       </Box>
 
+      {/* Toolbar flutuante com ações de perguntar e dividir */}
       <FlashCardFloatingToolbar
         onPerguntar={handlePerguntarClickOneButton}
         onDividir={handleDividirClick}
       />
 
+      {/* Modal para edição com a função de perguntar */}
       {currentCardIndex !== null && (
         <FlashCardModal
           open={modalOpen}
-          onClose={handleCloseModal}
+          onClose={setModalOpen} // Função de fechamento do modal (sem argumentos)
           defaultCard={cards[currentCardIndex]}
           defaultInput={modalInput}
-          onSubmit={handleUpdateCard}
+          onSubmit={(updatedCard: CardData) => {
+            // Atualiza o card usando o método centralizado
+            handleUpdateCard(updatedCard);
+          }}
           selRange={selRange}
           originalSelection={originalSelection}
         />
       )}
 
+      {/* Modal para edição do card */}
       {currentEditCardIndex !== null && (
         <EditCardModal
           open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
+          onClose={() => setEditModalOpen(false)}  // Utilize a mesma função de fechamento sem passar argumentos
           defaultCard={cards[currentEditCardIndex]}
           onSubmit={handleUpdateCard}
           onDelete={() => handleDeleteCard(currentEditCardIndex)}
