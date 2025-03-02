@@ -11,22 +11,27 @@ function useCardDelete(
 ) {
   /**
    * Manipula a exclusão de um card
-   * Ao deletar um card, restaura-se o estado anterior à divisão:
-   * - O originalText do card deletado vai para o originalText do card anterior
-   * - O originalText do card deletado também vai para o plainText do card anterior
    */
   const handleDeleteCard = useCallback((index: number) => {
     setCards(prevCards => {
       const newCards = [...prevCards];
-      // Se não for o primeiro card, combina os textos com o card anterior
+      
       if (index > 0) {
-        // Adiciona o originalText do card sendo deletado ao originalText do card anterior
-        newCards[index - 1].originalText += ' ' + newCards[index].originalText;
+        const previousCard = newCards[index - 1];
+        const cardToDelete = newCards[index];
+        const textToAdd = cardToDelete.originalText;
         
-        // Adiciona o originalText do card sendo deletado ao plainText do card anterior
-        // Isso restaura o estado antes da divisão do card
-        newCards[index - 1].plainText += ' ' + newCards[index].originalText;
+        // Adiciona texto ao originalText apenas se não existir
+        if (!previousCard.originalText.includes(textToAdd)) {
+          previousCard.originalText += ' ' + textToAdd;
+        }
+        
+        // Adiciona texto ao plainText apenas se não existir
+        if (!previousCard.plainText.includes(textToAdd)) {
+          previousCard.plainText += ' ' + textToAdd;
+        }
       }
+      
       newCards.splice(index, 1);
       return newCards;
     });
