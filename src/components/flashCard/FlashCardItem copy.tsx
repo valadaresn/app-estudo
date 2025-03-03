@@ -10,7 +10,6 @@ interface FlashCardItemProps {
   onEdit: (index: number) => void;
   onAnswerChange: (index: number, answer: string) => void;
   hideFeedback?: boolean;
-  mode?: 'study' | 'edit' | 'create'; // Novo prop para controlar o modo
 }
 
 /**
@@ -20,7 +19,6 @@ interface FlashCardItemProps {
  * sendo que o texto da questão é exibido em modo disable).
  * 
  * O parâmetro hideFeedback controla a exibição do campo de resposta para visualização em dispositivos móveis.
- * O parâmetro mode controla o comportamento do card de acordo com o modo selecionado.
  */
 const FlashCardItem: React.FC<FlashCardItemProps> = ({
   card,
@@ -28,27 +26,14 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
   questionRefs,
   onEdit,
   onAnswerChange,
-  hideFeedback = false,
-  mode = 'study' // Modo padrão é estudo
+  hideFeedback = false
 }) => {
   // Estado para controlar se o cartão está virado ou não
   const [isFlipped, setIsFlipped] = useState(false);
   
   // Função para virar o cartão
   const handleFlip = () => {
-    if (mode === 'study') {
-      setIsFlipped(!isFlipped);
-    }
-  };
-
-  // Function to handle card click based on mode
-  const handleCardClick = () => {
-    if (mode === 'edit') {
-      onEdit(index);
-    } else if (mode === 'study') {
-      handleFlip();
-    }
-    // No modo 'create', será usado o FloatingToolbar que é gerenciado fora deste componente
+    setIsFlipped(!isFlipped);
   };
 
   // Variable for the orange color
@@ -82,41 +67,55 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
       <Box sx={{ position: 'relative' }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={hideFeedback ? 12 : 8}>
-            {/* Conteúdo principal do cartão - agora sem a barra lateral */}
-            <Box
-              component="div"
-              ref={(el: HTMLDivElement | null) => {
-                questionRefs.current[index] = el;
-              }}
-              onClick={handleCardClick}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                padding: 2,
-                cursor: mode === 'create' ? 'text' : 'pointer',
-                backgroundColor: '#F5F5F5',
-                borderRadius: '4px',
-                height: 'auto',
-                position: 'relative',
-                minHeight: '100px',
-                transition: 'background-color 0.2s',
-                '&:hover': {
-                  backgroundColor: '#EAEAEA'
-                }
-              }}
-            >
-              {!isFlipped || mode !== 'study' ? (
-                // Frente do cartão (pergunta)
-                <Typography component="div">
-                  {highlightText(card.plainText)}
-                </Typography>
-              ) : (
-                // Verso do cartão (resposta) - só exibe no modo study quando virado
-                <Typography component="div">
-                  {card.answer}
-                </Typography>
-              )}
+            <Box sx={{ display: 'flex', position: 'relative' }}>
+              {/* Conteúdo principal do cartão */}
+              <Box
+                component="div"
+                ref={(el: HTMLDivElement | null) => {
+                  questionRefs.current[index] = el;
+                }}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  padding: 2,
+                  cursor: 'text',
+                  backgroundColor: '#F5F5F5',
+                  borderRadius: '4px 0 0 4px', // Arredonda apenas os cantos esquerdos
+                  height: 'auto',
+                  position: 'relative',
+                  minHeight: '100px'
+                }}
+              >
+                {!isFlipped ? (
+                  // Frente do cartão (pergunta)
+                  <Typography component="div">
+                    {highlightText(card.plainText)}
+                  </Typography>
+                ) : (
+                  // Verso do cartão (resposta)
+                  <Typography component="div">
+                    {card.answer}
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* Barra lateral com botão de flip */}
+              <Box
+                sx={{
+                  width: '24px',
+                  backgroundColor: '#e0e0e0',
+                  borderRadius: '0 4px 4px 0', // Arredonda apenas os cantos direitos
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer'
+                }}
+                onClick={handleFlip}
+              >
+                <FlipIcon sx={{ fontSize: '18px', color: '#555' }} />
+              </Box>
             </Box>
           </Grid>
           
