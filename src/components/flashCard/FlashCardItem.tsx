@@ -8,6 +8,7 @@ interface FlashCardItemProps {
   questionRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   onEdit: (index: number) => void;
   onAnswerChange: (index: number, answer: string) => void;
+  hideFeedback?: boolean;
 }
 
 /**
@@ -15,13 +16,16 @@ interface FlashCardItemProps {
  * (com anotações) e um input para a resposta. Contém também um botão "Editar"
  * que, ao ser clicado, abre o modal para editar o card (tanto a resposta como a questão,
  * sendo que o texto da questão é exibido em modo disable).
+ * 
+ * O parâmetro hideFeedback controla a exibição do campo de resposta para visualização em dispositivos móveis.
  */
 const FlashCardItem: React.FC<FlashCardItemProps> = ({
   card,
   index,
   questionRefs,
   onEdit,
-  onAnswerChange
+  onAnswerChange,
+  hideFeedback = false
 }) => {
   // Variable for the orange color
   const orangeColor = "#FFA500";
@@ -52,7 +56,7 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
   return (
     <Grid item xs={12}>
       <Grid container spacing={2} alignItems="center">
-        <Grid item xs={8}>
+        <Grid item xs={hideFeedback ? 12 : 8}>
           <Box
             component="div"
             ref={(el: HTMLDivElement | null) => {
@@ -74,24 +78,27 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
             </Typography>
           </Box>
         </Grid>
-        <Grid item xs={4}>
-          <TextField
-            label="Resposta"
-            multiline
-            variant="standard"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={card.answer}
-            onChange={(e) => onAnswerChange(index, e.target.value)}
-          />
-          <Button
-            onClick={() => onEdit(index)}
-            variant="outlined"
-            sx={{ marginTop: 1 }}
-          >
-            Editar
-          </Button>
-        </Grid>
+        
+        {!hideFeedback && (
+          <Grid item xs={4}>
+            <TextField
+              label="Resposta"
+              multiline
+              variant="standard"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={card.answer}
+              onChange={(e) => onAnswerChange(index, e.target.value)}
+            />
+            <Button
+              onClick={() => onEdit(index)}
+              variant="outlined"
+              sx={{ marginTop: 1 }}
+            >
+              Editar
+            </Button>
+          </Grid>
+        )}
       </Grid>
     </Grid>
   );

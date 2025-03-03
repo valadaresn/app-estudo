@@ -18,9 +18,15 @@ interface FlashCardProps {
   ancestorsInfo: string;
   defaultQuestion: string;
   onSubmit: (data: FlashCardForm) => void;
+  hideFeedback?: boolean; // Added prop for mobile view
 }
 
-const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, onSubmit }) => {
+const FlashCard: React.FC<FlashCardProps> = ({ 
+  ancestorsInfo, 
+  defaultQuestion, 
+  onSubmit,
+  hideFeedback = false // Default to showing feedback
+}) => {
   // Inicializa os métodos do react-hook-form com os valores iniciais
   const methods = useForm<FlashCardForm>({
     defaultValues: {
@@ -151,17 +157,20 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
                 questionRefs={questionRefs}
                 onEdit={handleEditCard}
                 onAnswerChange={handleAnswerChange}
+                hideFeedback={hideFeedback}
               />
             ))}
           </Grid>
 
-          <Grid container justifyContent="flex-end">
-            <Grid item>
-              <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 2 }}>
-                Enviar Flash Card
-              </Button>
+          {!hideFeedback && (
+            <Grid container justifyContent="flex-end">
+              <Grid item>
+                <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 2 }}>
+                  Enviar Flash Card
+                </Button>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </form>
       </Box>
 
@@ -190,7 +199,7 @@ const FlashCard: React.FC<FlashCardProps> = ({ ancestorsInfo, defaultQuestion, o
           onSubmit={handleUpdateCard}
           onDelete={() => handleDeleteCard(currentEditCardIndex)}
         />
-      )}
+      )} çl
     </FormProvider>
   );
 };
