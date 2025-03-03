@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CardData } from '../../models/flashCardTypes';
 import { Box, Grid, Typography, TextField, Button } from '@mui/material';
+import FlipIcon from '@mui/icons-material/Flip';
 
 interface FlashCardItemProps {
   card: CardData;
@@ -27,6 +28,14 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
   onAnswerChange,
   hideFeedback = false
 }) => {
+  // Estado para controlar se o cartão está virado ou não
+  const [isFlipped, setIsFlipped] = useState(false);
+  
+  // Função para virar o cartão
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
+  };
+
   // Variable for the orange color
   const orangeColor = "#FFA500";
 
@@ -55,51 +64,83 @@ const FlashCardItem: React.FC<FlashCardItemProps> = ({
 
   return (
     <Grid item xs={12}>
-      <Grid container spacing={2} alignItems="center">
-        <Grid item xs={hideFeedback ? 12 : 8}>
-          <Box
-            component="div"
-            ref={(el: HTMLDivElement | null) => {
-              questionRefs.current[index] = el;
-            }}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              padding: 2,
-              cursor: 'text',
-              backgroundColor: '#F5F5F5',
-              borderRadius: 1,
-              height: 'auto'
-            }}
-          >
-            <Typography component="div">
-              {highlightText(card.plainText)}
-            </Typography>
-          </Box>
-        </Grid>
-        
-        {!hideFeedback && (
-          <Grid item xs={4}>
-            <TextField
-              label="Resposta"
-              multiline
-              variant="standard"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={card.answer}
-              onChange={(e) => onAnswerChange(index, e.target.value)}
-            />
-            <Button
-              onClick={() => onEdit(index)}
-              variant="outlined"
-              sx={{ marginTop: 1 }}
-            >
-              Editar
-            </Button>
+      <Box sx={{ position: 'relative' }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={hideFeedback ? 12 : 8}>
+            <Box sx={{ display: 'flex', position: 'relative' }}>
+              {/* Conteúdo principal do cartão */}
+              <Box
+                component="div"
+                ref={(el: HTMLDivElement | null) => {
+                  questionRefs.current[index] = el;
+                }}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  padding: 2,
+                  cursor: 'text',
+                  backgroundColor: '#F5F5F5',
+                  borderRadius: '4px 0 0 4px', // Arredonda apenas os cantos esquerdos
+                  height: 'auto',
+                  position: 'relative',
+                  minHeight: '100px'
+                }}
+              >
+                {!isFlipped ? (
+                  // Frente do cartão (pergunta)
+                  <Typography component="div">
+                    {highlightText(card.plainText)}
+                  </Typography>
+                ) : (
+                  // Verso do cartão (resposta)
+                  <Typography component="div">
+                    {card.answer}
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* Barra lateral com botão de flip */}
+              <Box
+                sx={{
+                  width: '24px',
+                  backgroundColor: '#e0e0e0',
+                  borderRadius: '0 4px 4px 0', // Arredonda apenas os cantos direitos
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer'
+                }}
+                onClick={handleFlip}
+              >
+                <FlipIcon sx={{ fontSize: '18px', color: '#555' }} />
+              </Box>
+            </Box>
           </Grid>
-        )}
-      </Grid>
+          
+          {!hideFeedback && (
+            <Grid item xs={4}>
+              <TextField
+                label="Resposta"
+                multiline
+                variant="standard"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                value={card.answer}
+                onChange={(e) => onAnswerChange(index, e.target.value)}
+              />
+              <Button
+                onClick={() => onEdit(index)}
+                variant="outlined"
+                sx={{ marginTop: 1 }}
+              >
+                Editar
+              </Button>
+            </Grid>
+          )}
+        </Grid>
+      </Box>
     </Grid>
   );
 };
