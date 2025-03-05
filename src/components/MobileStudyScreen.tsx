@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react'; 
-import { Box } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, IconButton, Typography } from '@mui/material';
+// Importação corrigida para MUI v6
+//import ArrowBackIcon from '@mui/icons-material/ArrowBack';  
 import { parseCSV } from '../util/csvUtils';
 import { Lei } from '../models/Lei';
 import { CardData } from '../models/flashCardTypes';
-import { getAncestors, mapRowToLei } from '../util/leiUtils';
+import { mapRowToLei, getAncestors } from '../util/leiUtils';
 import LeiList from './LeiList';
 import MobileFlashCard from './flashCard/MobileFlashCard';
 
@@ -13,23 +15,14 @@ const MobileStudyScreen: React.FC = () => {
   const [selectedLei, setSelectedLei] = useState<Lei | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [ancestorsInfo, setAncestorsInfo] = useState<string>("");
-  const [cards, setCards] = useState<CardData[]>([]);
+  const [savedCards, setSavedCards] = useState<{ [key: string]: CardData[] }>({});
 
-  const buildFlashCard = useCallback((lei: Lei, leis: Lei[]) => {
+  const buildAncestorsInfo = useCallback((lei: Lei, leis: Lei[]) => {
     const ancestors = getAncestors(lei, leis);
     const ancestorsStr = ancestors
       .map((a) => `${a.tipo.toUpperCase()} (${a.numero}): ${a.dispositivo}`)
       .join(' -> ');
     setAncestorsInfo(ancestorsStr || 'Nenhum pai');
-    
-    // Criar um novo card baseado na lei selecionada
-    const newCard: CardData = {
-      plainText: lei.dispositivo,
-      originalText: lei.dispositivo,
-      answer: ''
-    };
-    
-    setCards([newCard]);
   }, []);
 
   useEffect(() => {
@@ -43,28 +36,28 @@ const MobileStudyScreen: React.FC = () => {
         if (leis.length > 0) {
           setSelectedLei(leis[0]);
           setSelectedIndex(0);
-          buildFlashCard(leis[0], leis);
+          buildAncestorsInfo(leis[0], leis);
         }
       });
-  }, [buildFlashCard]);
+  }, [buildAncestorsInfo]);
 
   const handleSelectionChange = (index: number) => {
     const lei = data[index];
     setSelectedLei(lei);
     setSelectedIndex(index);
-    buildFlashCard(lei, data);
-    setShowLeiList(false); // Mostrar os flashcards após selecionar uma lei
+    buildAncestorsInfo(lei, data);
   };
 
-  const handleCardUpdate = (index: number, updatedCard: CardData) => {
-    const newCards = [...cards];
-    newCards[index] = updatedCard;
-    setCards(newCards);
-  };
-
-  const handleCardDelete = (index: number) => {
-    const newCards = cards.filter((_, i) => i !== index);
-    setCards(newCards);
+  // Novo manipulador para salvar as alterações dos cards
+  const handleSaveCards = (cards: CardData[]) => {
+    if (selectedLei) {
+      // Usamos o id da lei como chave para armazenar os cards
+      const leiKey = `${selectedLei.tipo}-${selectedLei.numero}`;
+      setSavedCards(prev => ({
+        ...prev,
+        [leiKey]: cards
+      }));
+    }
   };
 
   const handleBackToList = () => {
@@ -72,45 +65,37 @@ const MobileStudyScreen: React.FC = () => {
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      width: '100%', 
-      height: '100vh', 
-      overflow: 'hidden' 
-    }}>
+    <Box sx={{ width: '100%', height: '100vh', overflow: 'auto' }}>
       {showLeiList ? (
-        <LeiList 
-          data={data} 
-          onSelectionChange={handleSelectionChange} 
-          selectedIndex={selectedIndex} 
+        <LeiList
+          data={data}
+          onSelectionChange={(idx) => {
+            handleSelectionChange(idx);
+            setShowLeiList(false);
+          }}
+          selectedIndex={selectedIndex}         
         />
       ) : (
-        <Box sx={{ 
-          flexGrow: 1, 
-          overflow: 'auto', 
-          display: 'flex', 
-          flexDirection: 'column' 
-        }}>
-          <Box 
-            onClick={handleBackToList} 
-            sx={{ 
-              padding: '8px 16px', 
-              color: 'primary.main', 
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }}
-          >
-            ← Voltar para lista
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', padding: 1 }}>
+          <IconButton onClick={handleBackToList} edge="start">
+              {/* Substituindo o ícone por um caractere Unicode */}
+              <span style={{ fontSize: '24px' }}>←</span>
+            </IconButton>
+
+            <Typography variant="subtitle1" sx={{ marginLeft: 1 }}>
+              {selectedLei?.dispositivo?.substring(0, 30)}...
+            </Typography>
           </Box>
-          <MobileFlashCard 
-            cards={cards}
-            ancestorsInfo={ancestorsInfo}
-            onCardUpdate={handleCardUpdate}
-            onCardDelete={handleCardDelete}
-          />
-        </Box>
+
+          {selectedLei && (
+            <MobileFlashCard
+              initialCardData={selectedLei.dispositivo}
+              ancestorsInfo={ancestorsInfo}
+              onSave={handleSaveCards}
+            />
+          )}
+        </>
       )}
     </Box>
   );

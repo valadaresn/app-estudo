@@ -1,205 +1,127 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Box, Grid, FormControl, FormControlLabel, Radio, RadioGroup, Typography } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Grid, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
+import FlashCardModal from './FlashCardModal';
 import EditCardModal from './EditCardModal';
 import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
-import FlashCardModal from './FlashCardModal';
 
-// Importando os hooks existentes
-import useCardSelection from '../../hooks/flashCard/useCardSelection';
-import useCardSplitting from '../../hooks/flashCard/useCardSplitting';
-import useCardModals from '../../hooks/flashCard/useCardModals';
+// Importando o hook central
+import useFlashCards from '../../hooks/flashCard/useFlashCard';
 
 interface MobileFlashCardProps {
-  cards: CardData[];
+  initialCardData: string; // Recebe apenas o texto inicial, não os cards completos
   ancestorsInfo: string;
-  onCardUpdate: (index: number, updatedCard: CardData) => void;
-  onCardDelete: (index: number) => void;
+  onSave: (cards: CardData[]) => void; // Callback para salvar alterações
 }
 
 type StudyMode = 'study' | 'edit' | 'create';
 
 const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
-  cards,
+  initialCardData,
   ancestorsInfo,
-  onCardUpdate,
-  onCardDelete
+  onSave
 }) => {
   const [mode, setMode] = useState<StudyMode>('study');
-  const [editCardIndex, setEditCardIndex] = useState<number | null>(null);
-  const [localCards, setLocalCards] = useState<CardData[]>(cards);
-  const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Atualizando localCards quando cards externos mudam
-  useEffect(() => {
-    setLocalCards(cards);
-  }, [cards]);
-
-  // Hooks para gerenciar modais e seleção de texto
-  const { captureSelection } = useCardSelection(localCards, questionRefs);
   
-  const { 
-    modalOpen, 
-    modalInput, 
+  // Usa o hook central para gerenciar toda a lógica
+  const {
+    cards,
+    questionRefs,
+    modalOpen,
+    modalInput,
     originalSelection,
     selRange,
     currentCardIndex,
-    handlePerguntarClickOneButton,
+    editModalOpen,
+    currentEditCardIndex,
+    handlePerguntarClick,
+    handleDividir,
+    handleEditCard,
+    handleUpdateCard,
+    handleAnswerChange,
+    handleDeleteCard,
     handleCloseModal
-  } = useCardModals();
-
-  // Utilizando o hook com o setState local
-  const { handleDividirClick } = useCardSplitting(
-    localCards,
-    setLocalCards,
-    captureSelection
-  );
-
-  // Sincronizar alterações locais para o componente pai
+  } = useFlashCards({ defaultQuestion: initialCardData });
+  
+  // Efeito para salvar automaticamente quando os cards mudam
   useEffect(() => {
-    localCards.forEach((card, idx) => {
-      if (idx < cards.length) {
-        onCardUpdate(idx, card);
-      } else if (idx === cards.length) {
-        // Este é um novo card que foi adicionado (como resultado da divisão)
-        onCardUpdate(idx, card);
-      }
-    });
-  }, [localCards, cards.length, onCardUpdate]);
-
-  const handleModeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMode(event.target.value as StudyMode);
-  };
-
-  const handleEditCard = (index: number) => {
-    setEditCardIndex(index);
-  };
-
-  const handleCardUpdate = (updatedCard: CardData) => {
-    if (editCardIndex !== null) {
-      onCardUpdate(editCardIndex, updatedCard);
-      setEditCardIndex(null);
-    }
-  };
-
-  const handleAnswerChange = (index: number, answer: string) => {
-    const updatedCard = { ...localCards[index], answer };
-    
-    // Atualize o estado local primeiro
-    setLocalCards(prev => {
-      const updated = [...prev];
-      updated[index] = updatedCard;
-      return updated;
-    });
-    
-    // Também notifique o componente pai
-    onCardUpdate(index, updatedCard);
-  };
-
-  // Wrapper para lidar com a seleção antes de abrir o modal de perguntas
-  const handlePerguntar = (selection: Selection) => {
-    const selectionData = captureSelection(selection);
-    if (selectionData) {
-      handlePerguntarClickOneButton(selectionData);
-    }
-  };
-
-  // Wrapper para a função de dividir cartão - CORRIGIDO
-  const handleDividir = (selection: Selection) => {
-    // Usamos diretamente o handleDividirClick do hook
-    handleDividirClick(selection);
-  };
-
-  // Manipulador para submissão do modal de perguntas
-  const handleModalSubmit = (updatedCard: CardData) => {
-    if (currentCardIndex !== null) {
-      // Atualize o estado local primeiro
-      setLocalCards(prev => {
-        const updated = [...prev];
-        updated[currentCardIndex] = updatedCard;
-        return updated;
-      });
-      
-      // Também notifique o componente pai
-      onCardUpdate(currentCardIndex, updatedCard);
-      handleCloseModal();
-    }
-  };
+    // Salvamos automaticamente quando houver mudanças
+    onSave(cards);
+  }, [cards, onSave]);
 
   return (
     <Box sx={{ width: '100%', padding: 1 }}>
-      {/* Controles de modo */}
-      <FormControl component="fieldset" sx={{ mb: 2, width: '100%' }}>
-        <RadioGroup
-          row
+      <Box sx={{ marginBottom: 2 }}>
+        <ToggleButtonGroup
           value={mode}
-          onChange={handleModeChange}
-          sx={{ justifyContent: 'center' }}
+          exclusive
+          onChange={(_, newMode) => newMode && setMode(newMode)}
+          aria-label="Modo de estudo"
+          fullWidth
+          size="small"
         >
-          <FormControlLabel value="study" control={<Radio />} label="Estudar" />
-          <FormControlLabel value="edit" control={<Radio />} label="Editar" />
-          <FormControlLabel value="create" control={<Radio />} label="Criar" />
-        </RadioGroup>
-      </FormControl>
+          <ToggleButton value="study" aria-label="modo estudo">
+            Estudo
+          </ToggleButton>
+          <ToggleButton value="edit" aria-label="modo edição">
+            Edição
+          </ToggleButton>
+          <ToggleButton value="create" aria-label="modo criação">
+            Criação
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
-      {/* Informações de contexto */}
       {ancestorsInfo && (
-        <Typography 
-          variant="body2" 
-          color="textSecondary" 
-          sx={{ mb: 2, fontSize: '0.75rem' }}
-        >
+        <Typography variant="body2" color="textSecondary" sx={{ marginBottom: 2 }}>
           {ancestorsInfo}
         </Typography>
       )}
 
-      {/* Lista de cartões */}
-      <Grid container spacing={1}>
-        {localCards.map((card, index) => (
-          <Grid item xs={12} key={index}>
-            <FlashCardItem
-              card={card}
-              index={index}
-              questionRefs={questionRefs}
-              onEdit={handleEditCard}
-              onAnswerChange={handleAnswerChange}
-              hideFeedback={true}
-              mode={mode}
-            />
-          </Grid>
+      <Grid container spacing={2}>
+        {cards.map((card, index) => (
+          <FlashCardItem
+            key={index}
+            card={card}
+            index={index}
+            questionRefs={questionRefs}
+            onEdit={handleEditCard}
+            onAnswerChange={handleAnswerChange}
+            hideFeedback={true} 
+            mode={mode}
+          />
         ))}
       </Grid>
 
-      {/* Modal de edição */}
-      {editCardIndex !== null && (
-        <EditCardModal
-          open={editCardIndex !== null}
-          onClose={() => setEditCardIndex(null)}
-          defaultCard={localCards[editCardIndex]}
-          onSubmit={handleCardUpdate}
-          onDelete={() => onCardDelete(editCardIndex)}
-        />
-      )}
-
-      {/* Barra de ferramentas flutuante para o modo de criação */}
+      {/* Exibir a barra flutuante apenas no modo criação */}
       {mode === 'create' && (
         <FlashCardFloatingToolbar 
-          onPerguntar={handlePerguntar}
+          onPerguntar={handlePerguntarClick}
           onDividir={handleDividir}
         />
       )}
 
-      {/* Modal de criação de pergunta */}
+      {/* Modais */}
       {currentCardIndex !== null && modalOpen && (
         <FlashCardModal
           open={modalOpen}
           onClose={handleCloseModal}
-          defaultCard={localCards[currentCardIndex]}
+          defaultCard={cards[currentCardIndex]}
           defaultInput={modalInput}
-          onSubmit={handleModalSubmit}
+          onSubmit={handleUpdateCard}
           selRange={selRange}
           originalSelection={originalSelection}
+        />
+      )}
+      
+      {currentEditCardIndex !== null && (
+        <EditCardModal
+          open={editModalOpen}
+          onClose={handleCloseModal}
+          defaultCard={cards[currentEditCardIndex]}
+          onSubmit={handleUpdateCard}
+          onDelete={() => handleDeleteCard(currentEditCardIndex)}
         />
       )}
     </Box>

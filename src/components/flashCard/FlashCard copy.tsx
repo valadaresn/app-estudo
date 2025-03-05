@@ -1,37 +1,35 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Box, Grid, Typography, Button } from '@mui/material';
 import { useForm, FormProvider } from 'react-hook-form';
-import {
-  Typography,  
-  Button,
-  Grid,
-  Box,
-} from '@mui/material';
-import { FlashCardForm } from '../../models/flashCardTypes';
+import { CardData, FlashCardForm } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
 import EditCardModal from './EditCardModal';
 import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
-import useFlashCards from '../../hooks/flashCard/useFlashCard';
 
-// Importando o hook central
-//import useFlashCards from '../../hooks/flashCard/useFlashCards';
+// Importando os hooks refatorados
+import useCardSelection from '../../hooks/flashCard/useCardSelection';
+import useCardSplitting from '../../hooks/flashCard/useCardSplitting';
+import useCardModals from '../../hooks/flashCard/useCardModals';
+import useCardEditing from '../../hooks/flashCard/useCardEditing';
+import useCardDelete from '../../hooks/flashCard/useCardDelete';
 
 interface FlashCardProps {
   ancestorsInfo: string;
   defaultQuestion: string;
   onSubmit: (data: FlashCardForm) => void;
-  hideFeedback?: boolean;
-  mode?: 'study' | 'edit' | 'create';
+  hideFeedback?: boolean; // Added prop for mobile view
+  mode?: 'study' | 'edit' | 'create'; // Added prop for controlling the mode
 }
 
 const FlashCard: React.FC<FlashCardProps> = ({ 
   ancestorsInfo, 
   defaultQuestion, 
   onSubmit,
-  hideFeedback = false,
-  mode = 'study'
+  hideFeedback = false, // Default to showing feedback
+  mode = 'study' // Default to study mode
 }) => {
-  // Inicializa o formulário
+  // Inicializa os métodos do react-hook-form com os valores iniciais
   const methods = useForm<FlashCardForm>({
     defaultValues: {
       cards: [
@@ -41,25 +39,79 @@ const FlashCard: React.FC<FlashCardProps> = ({
   });
   const { handleSubmit, reset } = methods;
 
-  // Usa o hook central que gerencia toda a lógica
-  const {
-    cards,
-    questionRefs,
-    modalOpen,
-    modalInput,
+  // Estado dos cards
+  const [cards, setCards] = useState<CardData[]>([
+    { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
+  ]);
+  
+  // Referências aos elementos de cada card
+  const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Aplicando os hooks refatorados
+  const { captureSelection } = useCardSelection(cards, questionRefs);
+  
+  const { 
+    modalOpen, 
+    modalInput, 
     originalSelection,
     selRange,
     currentCardIndex,
     editModalOpen,
+    currentEditCardIndex,    
+    setCurrentCardIndex,
+    setEditModalOpen,
+    setCurrentEditCardIndex,
+    handlePerguntarClickOneButton: handleModalOpen,
+    handleCloseModal,
+    resetSelectionStates
+  } = useCardModals();
+  
+  const { handleEditCard, handleUpdateCard, handleAnswerChange } = useCardEditing(
+    setCards,
+    handleCloseModal,
+    setEditModalOpen,
+    currentCardIndex,
+    setCurrentCardIndex,
     currentEditCardIndex,
-    handlePerguntarClick,
-    handleDividir,
-    handleEditCard,
-    handleUpdateCard,
-    handleAnswerChange,
-    handleDeleteCard,
-    handleCloseModal
-  } = useFlashCards({ defaultQuestion, reset });
+    setCurrentEditCardIndex,
+    resetSelectionStates
+  );
+  
+  const { handleDividirClick: dividirHandler } = useCardSplitting(
+    cards,
+    setCards,
+    captureSelection
+  );
+  
+  const { handleDeleteCard } = useCardDelete(
+    setCards,
+    setEditModalOpen,
+    setCurrentEditCardIndex
+  );
+
+  // Wrapper para lidar com a seleção antes de abrir o modal de perguntas
+  const handlePerguntarClickOneButton = (selection: Selection) => {
+    const selectionData = captureSelection(selection);
+    handleModalOpen(selectionData);
+  };
+
+  // Wrapper para garantir que a função de dividir tenha acesso à seleção atual
+  const handleDividirClick = (selection: Selection) => {
+    dividirHandler(selection);
+  };
+
+  // Efeitos para sincronizar o estado dos cards com o formulário
+  useEffect(() => {
+    reset({ cards });
+  }, [cards, reset]);
+
+  useEffect(() => {
+    const newCards = [
+      { plainText: defaultQuestion, originalText: defaultQuestion, answer: '' }
+    ];
+    setCards(newCards);
+    reset({ cards: newCards });
+  }, [defaultQuestion, reset]);
 
   return (
     <FormProvider {...methods}>
@@ -79,7 +131,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
             <Grid container spacing={2} sx={{ marginBottom: 2 }}>
               <Grid item>
                 <Button
-                  onClick={() => handlePerguntarClick(window.getSelection()!)}
+                  onClick={() => handlePerguntarClickOneButton(window.getSelection()!)}
                   variant="outlined"
                 >
                   Perguntar
@@ -87,7 +139,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
               </Grid>
               <Grid item>
                 <Button
-                  onClick={() => handleDividir(window.getSelection()!)}
+                  onClick={() => handleDividirClick(window.getSelection()!)}
                   variant="outlined"
                   color="error"
                 >
@@ -111,7 +163,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
                 onEdit={handleEditCard}
                 onAnswerChange={handleAnswerChange}
                 hideFeedback={hideFeedback}
-                mode={mode}
+                mode={mode} // Passamos o modo para os FlashCardItems
               />
             ))}
           </Grid>
@@ -132,8 +184,8 @@ const FlashCard: React.FC<FlashCardProps> = ({
       {/* Exibir a barra flutuante apenas no modo criação */}
       {mode === 'create' && (
         <FlashCardFloatingToolbar
-          onPerguntar={handlePerguntarClick}
-          onDividir={handleDividir}
+          onPerguntar={handlePerguntarClickOneButton}
+          onDividir={handleDividirClick}
         />
       )}
 
@@ -153,7 +205,7 @@ const FlashCard: React.FC<FlashCardProps> = ({
       {currentEditCardIndex !== null && (
         <EditCardModal
           open={editModalOpen}
-          onClose={() => handleCloseModal()}
+          onClose={() => setEditModalOpen(false)}
           defaultCard={cards[currentEditCardIndex]}
           onSubmit={handleUpdateCard}
           onDelete={() => handleDeleteCard(currentEditCardIndex)}
