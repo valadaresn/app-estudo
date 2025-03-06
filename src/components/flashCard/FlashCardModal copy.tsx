@@ -1,8 +1,13 @@
 import React from 'react';
-import { FormProvider } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
-import { useFlashCardForm } from '../../hooks/useFlashCardForm';
+import { modifyCardText } from '../../util/flashCardUtils';
+
+interface FlashModalFormData {
+  inputValue: string;
+  answer: string;
+}
 
 interface FlashCardModalProps {
   open: boolean;
@@ -23,16 +28,30 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
   selRange,
   originalSelection
 }) => {
-  const { methods, submitHandler } = useFlashCardForm({
-    defaultCard,
-    defaultInput,
-    onSubmit,
-    onClose,
-    selRange,
-    originalSelection
+  const methods = useForm<FlashModalFormData>({
+    defaultValues: {
+      inputValue: defaultInput,
+      answer: defaultCard.answer
+    }
   });
   
-  const { register } = methods;
+  const { handleSubmit, register } = methods;
+
+  const submitHandler = (data: FlashModalFormData) => {
+    const modifiedCard = modifyCardText(
+      defaultCard, 
+      selRange, 
+      data.inputValue, 
+      originalSelection
+    );
+    
+    // Preenche o answer com o texto que o usuário selecionou originalmente
+    modifiedCard.answer = originalSelection;
+    
+    // Submete as alterações e fecha o modal
+    onSubmit(modifiedCard);
+    onClose();
+  };
 
   return (
     <FormProvider {...methods}>
@@ -67,7 +86,7 @@ const FlashCardModal: React.FC<FlashCardModalProps> = ({
             Cancelar
           </Button>
           <Button 
-            onClick={submitHandler} 
+            onClick={handleSubmit(submitHandler)} 
             variant="contained" 
             color="primary"
           >

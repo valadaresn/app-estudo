@@ -1,26 +1,36 @@
 import React from 'react';
 import { FormProvider } from 'react-hook-form';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, IconButton, TextField, Button } from '@mui/material';
 import { CardData } from '../../models/flashCardTypes';
 import { useEditCardForm } from '../../hooks/useEditCardForm';
 
-interface EditCardModalProps {
-  open: boolean;
-  onClose: () => void;
+// Alterada a interface para remover a prop 'open' que não é necessária para fullscreen
+interface MobileEditCardProps {
   defaultCard: CardData;
   onSubmit: (updatedCard: CardData) => void;
   onDelete: () => void;
+  onClose: () => void;
 }
 
-const EditCardModal: React.FC<EditCardModalProps> = ({ open, onClose, defaultCard, onSubmit, onDelete }) => {
+const MobileEditCard: React.FC<MobileEditCardProps> = ({ defaultCard, onSubmit, onDelete, onClose }) => {
   const { methods, submitHandler } = useEditCardForm(defaultCard, onSubmit, onClose);
   const { register } = methods;
 
   return (
     <FormProvider {...methods}>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar Card</DialogTitle>
-        <DialogContent>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <AppBar position="static">
+          <Toolbar>
+            <IconButton edge="start" color="inherit" onClick={onClose}>
+              <span style={{ fontSize: '24px' }}>←</span>
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
+              Editar Card
+            </Typography>
+          </Toolbar>
+        </AppBar>
+
+        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
           <TextField
             {...register('originalText')}
             label="Texto Original"
@@ -47,17 +57,21 @@ const EditCardModal: React.FC<EditCardModalProps> = ({ open, onClose, defaultCar
             multiline
             rows={2}
           />
-        </DialogContent>
-        <DialogActions>
+        </Box>
+
+        <Box sx={{ 
+          p: 2, 
+          borderTop: 1, 
+          borderColor: 'divider',
+          display: 'flex', 
+          justifyContent: 'space-between' 
+        }}>
           <Button 
             onClick={onDelete}
             color="error"
-            sx={{ marginRight: 'auto' }}
+            variant="contained"
           >
-            Excluir Card
-          </Button>
-          <Button onClick={onClose}>
-            Cancelar
+            Excluir
           </Button>
           <Button 
             onClick={submitHandler} 
@@ -66,10 +80,10 @@ const EditCardModal: React.FC<EditCardModalProps> = ({ open, onClose, defaultCar
           >
             Salvar
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Box>
     </FormProvider>
   );
 };
 
-export default EditCardModal;
+export default MobileEditCard;

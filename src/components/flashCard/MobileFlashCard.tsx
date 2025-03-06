@@ -3,7 +3,7 @@ import { Box, Grid, Typography, ToggleButtonGroup, ToggleButton } from '@mui/mat
 import { CardData } from '../../models/flashCardTypes';
 import FlashCardItem from './FlashCardItem';
 import FlashCardModal from './FlashCardModal';
-import EditCardModal from './EditCardModal';
+import MobileEditCard from './MobileEditCard';
 import FlashCardFloatingToolbar from './FlashCardFloatingToolbar';
 
 // Importando o hook central
@@ -23,6 +23,7 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
   onSave
 }) => {
   const [mode, setMode] = useState<StudyMode>('study');
+  const [showFullScreenEdit, setShowFullScreenEdit] = useState<boolean>(false);
   
   // Usa o hook central para gerenciar toda a lógica
   const {
@@ -49,6 +50,23 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
     // Salvamos automaticamente quando houver mudanças
     onSave(cards);
   }, [cards, onSave]);
+  
+  // Efeito para controlar a visibilidade do editor full-screen
+  useEffect(() => {
+    setShowFullScreenEdit(currentEditCardIndex !== null && editModalOpen);
+  }, [currentEditCardIndex, editModalOpen]);
+  
+  // Se estiver mostrando o editor full-screen
+  if (showFullScreenEdit && currentEditCardIndex !== null) {
+    return (
+      <MobileEditCard
+        defaultCard={cards[currentEditCardIndex]}
+        onSubmit={handleUpdateCard}
+        onDelete={() => handleDeleteCard(currentEditCardIndex)}
+        onClose={handleCloseModal}
+      />
+    );
+  }
 
   return (
     <Box sx={{ width: '100%', padding: 1 }}>
@@ -102,7 +120,7 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
         />
       )}
 
-      {/* Modais */}
+      {/* Mantemos o FlashCardModal como modal por ser mais simples */}
       {currentCardIndex !== null && modalOpen && (
         <FlashCardModal
           open={modalOpen}
@@ -115,15 +133,7 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
         />
       )}
       
-      {currentEditCardIndex !== null && (
-        <EditCardModal
-          open={editModalOpen}
-          onClose={handleCloseModal}
-          defaultCard={cards[currentEditCardIndex]}
-          onSubmit={handleUpdateCard}
-          onDelete={() => handleDeleteCard(currentEditCardIndex)}
-        />
-      )}
+      {/* Não precisamos mais do EditCardModal porque estamos usando o MobileEditCard em full-screen */}
     </Box>
   );
 };
