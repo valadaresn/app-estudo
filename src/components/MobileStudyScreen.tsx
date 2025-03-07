@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, IconButton, Typography } from '@mui/material';
-// Importação corrigida para MUI v6
-//import ArrowBackIcon from '@mui/icons-material/ArrowBack';  
+import { Box } from '@mui/material';
 import { parseCSV } from '../util/csvUtils';
 import { Lei } from '../models/Lei';
 import { CardData } from '../models/flashCardTypes';
@@ -77,22 +75,13 @@ const MobileStudyScreen: React.FC = () => {
         />
       ) : (
         <>
-          <Box sx={{ display: 'flex', alignItems: 'center', padding: 1 }}>
-          <IconButton onClick={handleBackToList} edge="start">
-              {/* Substituindo o ícone por um caractere Unicode */}
-              <span style={{ fontSize: '24px' }}>←</span>
-            </IconButton>
-
-            <Typography variant="subtitle1" sx={{ marginLeft: 1 }}>
-              {selectedLei?.dispositivo?.substring(0, 30)}...
-            </Typography>
-          </Box>
-
           {selectedLei && (
             <MobileFlashCard
               initialCardData={selectedLei.dispositivo}
               ancestorsInfo={ancestorsInfo}
               onSave={handleSaveCards}
+              onBack={handleBackToList}
+              title={selectedLei?.dispositivo?.substring(0, 30) + "..."}
             />
           )}
         </>
