@@ -12,12 +12,10 @@ import useCardModals from '../../hooks/flashCard/useCardModals';
 import useCardEditing from '../../hooks/flashCard/useCardEditing';
 import useCardSplitting from '../../hooks/flashCard/useCardSplitting';
 import useCardDelete from '../../hooks/flashCard/useCardDelete';
-import { useFlashCardRepository } from '../../hooks/flashCard/useFlashCardRepository'; // Adicionado
 
 interface MobileFlashCardProps {
   initialCardData: string;
   ancestorsInfo: string;
-  leiId?: string;  // Novo parâmetro opcional
   onSave: (cards: CardData[]) => void;
   onBack: () => void;
   title?: string;
@@ -28,7 +26,6 @@ type StudyMode = 'study' | 'edit' | 'create';
 const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
   initialCardData,
   ancestorsInfo,
-  leiId,
   onSave,
   onBack,
   title = "FlashCards"
@@ -40,11 +37,6 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
   const [cards, setCards] = useState<CardData[]>([
     { plainText: initialCardData, originalText: initialCardData, answer: '' }
   ]);
-  
-  // Chamar o hook sempre, mas apenas usar seu retorno se leiId existir
-  // Isso resolve o problema do hook condicional
-  const repository = useFlashCardRepository(leiId || '');
-  const useRepository = !!leiId; // Flag para determinar se usamos o repositório
   
   // Referências aos elementos de cada card
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -92,14 +84,6 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
     handleDividirClick(selection);
   };
 
-  // Sincronizar com o Firebase quando os dados estiverem disponíveis
-  useEffect(() => {
-    // Só usar o repositório se a flag useRepository for true
-    if (useRepository && !repository.loading && repository.cardData.length > 0) {
-      setCards(repository.cardData);
-    }
-  }, [repository.cardData, repository.loading, useRepository, repository]);
-
   // Efeito para atualização quando o initialCardData muda
   useEffect(() => {
     const newCards = [
@@ -110,14 +94,8 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
   
   // Efeito para salvar automaticamente quando os cards mudam
   useEffect(() => {
-    // Se a flag useRepository for true, salvar no Firebase
-    if (useRepository) {
-      repository.saveFlashCards(cards);
-    }
-    
-    // Sempre chamar o onSave original para manter compatibilidade
     onSave(cards);
-  }, [cards, onSave, repository, useRepository]);
+  }, [cards, onSave]);
 
   // Função local para lidar com o fechamento do modal de edição
   const handleCloseEditModal = () => {
@@ -181,7 +159,7 @@ const MobileFlashCard: React.FC<MobileFlashCardProps> = ({
         <Grid container spacing={2}>
           {cards.map((card, index) => (
             <FlashCardItem
-              key={card.id || index}  // Agora usamos o ID se disponível
+              key={index}
               card={card}
               index={index}
               questionRefs={questionRefs}
